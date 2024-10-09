@@ -9,47 +9,47 @@ const Theft = () => {
   const [money, setMoney] = useState(
     parseInt(localStorage.getItem('money')) || 0
   );
-  const [inJail, setInJail] = useState(localStorage.getItem('inJail') === 'true');
+  const [inJail, setInJail] = useState(
+    localStorage.getItem('inJail') === 'true'
+  );
   const [jailTime, setJailTime] = useState(
     parseInt(localStorage.getItem('jailTime')) || 30
   );
+  const [hasAttemptedBreakout, setHasAttemptedBreakout] = useState(false);
+  const [maxSecurity, setMaxSecurity] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [failureMessage, setFailureMessage] = useState('');
-  const [attemptedBreakout, setAttemptedBreakout] = useState(false);
   const [showPocket, setShowPocket] = useState(false);
 
-  // Adjusting theft chances and values for items
-  const items = [
-    {
-      name: 'Purse',
-      types: [
-        { name: 'Fat Purse', price: 200, baseChance: 30, image: '/assets/fat-purse.png' },
-        { name: 'Regular Purse', price: 100, baseChance: 40, image: '/assets/regular-purse.png' },
-        { name: 'Slim Purse', price: 50, baseChance: 50, image: '/assets/slim-purse.png' },
-        { name: 'Empty Purse', price: 0, baseChance: 60, image: '/assets/empty-purse.png' },
-      ],
-    },
-    {
-      name: 'Jewelry Store',
-      types: [
-        { name: 'Diamond', price: 5000, baseChance: 10, image: '/assets/diamond.png' },
-        { name: 'Ruby', price: 3000, baseChance: 15, image: '/assets/ruby.png' },
-        { name: 'Emerald', price: 2000, baseChance: 20, image: '/assets/emerald.png' },
-        { name: 'Sapphire', price: 1000, baseChance: 25, image: '/assets/sapphire.png' },
-      ],
-    },
-    {
-      name: 'ATM',
-      types: [{ name: 'ATM Money', price: 1000, baseChance: 30, image: '/assets/atm.png' }],
-    },
-    {
-      name: 'Bank',
-      types: [{ name: 'Bank Money', price: 50000, baseChance: 5, image: '/assets/bank.png' }],
-    },
-  ];
+  // Dynamic steal chance adjustment based on rank
+  const rank = user && user.rank ? user.rank : 1;
+
+  // Adjusting steal chances and values for each theft item
+  const items = {
+    'Purse': [
+      { name: 'Slim Purse', price: 50, baseChance: 40, image: '/assets/slim-purse.png' },
+      { name: 'Fat Purse', price: 200, baseChance: 25, image: '/assets/fat-purse.png' }
+    ],
+    'Jewelry': [
+      { name: 'Diamond', price: 5000, baseChance: 10, image: '/assets/diamond.png' },
+      { name: 'Ruby', price: 3000, baseChance: 15, image: '/assets/ruby.png' }
+    ],
+    'ATM': [
+      { name: 'ATM Money', price: 1000, baseChance: 30, image: '/assets/atm.png' }
+    ],
+    'Bank': [
+      { name: 'Bank Money', price: 50000, baseChance: 5, image: '/assets/bank.png' }
+    ]
+  };
+
+  const categoryImages = {
+    'Purse': '/assets/purse.png',
+    'Jewelry': '/assets/jewelry.png',
+    'ATM': '/assets/atm.png',
+    'Bank': '/assets/bank.png'
+  };
 
   useEffect(() => {
-    // Save to localStorage when state updates
     localStorage.setItem('stolenItems', JSON.stringify(stolenItems));
     localStorage.setItem('money', money.toString());
     localStorage.setItem('inJail', inJail.toString());
@@ -57,90 +57,70 @@ const Theft = () => {
   }, [stolenItems, money, inJail, jailTime]);
 
   const calculateStealChance = (baseChance) => {
-    return Math.min(baseChance + user.rank * 2, 90); // Adjust chance based on rank
+    const adjustedChance = baseChance + rank * 5; // Increase chance based on rank
+    return Math.min(adjustedChance, 90); // Cap the chance at 90%
   };
 
-  const stealItem = (itemName) => {
+  const stealItem = (category) => {
     if (inJail) {
       setFailureMessage('You cannot steal while in jail!');
       return;
     }
 
-    const item = items.find((i) => i.name === itemName);
-    const randomType = getRandomType(item.types);
-    const stealChance = calculateStealChance(randomType.baseChance);
-    const roll = Math.floor(Math.random() * 100) + 1;
+    setSuccessMessage('');
+    setFailureMessage('');
 
-    console.log(`Attempt to steal ${randomType.name} with chance of ${stealChance}%`);
-    console.log(`Roll: ${roll}`);
+    const itemCategory = items[category];
+    const item = getRandomItem(itemCategory); // Randomly select an item
+    const stealChance = calculateStealChance(item.baseChance);
+    const randomRoll = Math.floor(Math.random() * 100) + 1;
 
-    if (roll <= stealChance) {
-      setStolenItems((prevItems) => [...prevItems, randomType]);
-      setSuccessMessage(`You successfully stole a ${randomType.name}!`);
+    if (randomRoll <= stealChance) {
+      setStolenItems((prevItems) => [...prevItems, item]);
+      setSuccessMessage(`You successfully stole a ${item.name}!`);
       setFailureMessage('');
     } else {
-      const failureRoll = Math.random() * 100;
-      if (failureRoll <= 30) {
-        setFailureMessage(getTheftFailureScenario());
-      } else {
-        setFailureMessage('You got caught and sent to jail!');
-        sendToJail();
-      }
+      setFailureMessage('You got caught and sent to jail!');
+      sendToJail();
       setSuccessMessage('');
     }
   };
 
-  const getRandomType = (types) => {
-    let totalChance = types.reduce((sum, type) => sum + type.baseChance, 0);
-    let randomNum = Math.random() * totalChance;
-    for (let type of types) {
-      if (randomNum < type.baseChance) {
-        return type;
-      }
-      randomNum -= type.baseChance;
-    }
-    return types[types.length - 1]; // Fallback if needed
-  };
-
-  const getTheftFailureScenario = () => {
-    const scenarios = [
-      "You dropped the loot while fleeing!",
-      "Security camera spotted you!",
-      "You were chased off by security guards!",
-    ];
-    return scenarios[Math.floor(Math.random() * scenarios.length)];
+  const getRandomItem = (items) => {
+    const randomIndex = Math.floor(Math.random() * items.length);
+    return items[randomIndex];
   };
 
   const sendToJail = () => {
     setInJail(true);
-    setJailTime(30);
+    setJailTime(30); 
   };
 
-  const attemptBreakout = () => {
-    if (inJail && !attemptedBreakout) {
-      const chanceOfEscape = 5;
-      const roll = Math.floor(Math.random() * 100) + 1;
-      if (roll <= chanceOfEscape) {
-        setInJail(false);
-        setJailTime(0);
-        setSuccessMessage('You successfully broke out of jail!');
-      } else {
-        setJailTime((prevTime) => prevTime + 30);
-        setFailureMessage('Failed breakout attempt. Jail time increased.');
-      }
-      setAttemptedBreakout(true);
-    } else if (attemptedBreakout) {
-      setFailureMessage('You can only attempt to break out once.');
+  
+const attemptBreakout = () => {
+  if (inJail && !hasAttemptedBreakout && !maxSecurity) {
+    const chanceOfEscape = 5;
+    const roll = Math.floor(Math.random() * 100) + 1;
+
+    if (roll <= chanceOfEscape) {
+      setInJail(false);
+      setJailTime(0);
+      setSuccessMessage('You successfully broke out of jail!');
+    } else {
+      setJailTime((prevTime) => prevTime + 30); 
+      setFailureMessage('Failed breakout attempt! You have been sent to maximum security prison.');
+      setMaxSecurity(true); 
     }
-  };
+
+    setHasAttemptedBreakout(true); 
+  } else if (maxSecurity) {
+    setFailureMessage('You are in maximum security prison. No more breakout attempts allowed.');
+  } else if (hasAttemptedBreakout) {
+    setFailureMessage('You have already attempted to break out.');
+  }
+};
 
   const togglePocket = () => setShowPocket(!showPocket);
-
-  const cheat = () => {
-    console.log('Cheat activated: Free from jail, extra money!');
-    setInJail(false);
-    setMoney((prevMoney) => prevMoney + 5000);
-  };
 
   const sellItem = (index) => {
     const item = stolenItems[index];
@@ -148,25 +128,32 @@ const Theft = () => {
     setStolenItems(stolenItems.filter((_, i) => i !== index));
   };
 
+  // Cheat functionality to boost money and remove jail time
+  const cheat = () => {
+    console.log('Cheat activated: Free from jail, extra money!');
+    setInJail(false);
+    setMoney((prevMoney) => prevMoney + 50000);
+  };
+
   return (
     <div className="container mx-auto p-4">
       <h2 className="text-2xl font-bold mb-4">Theft</h2>
 
-      {/* Items section */}
-      <div className="grid grid-cols-2 gap-4">
-        {items.map((item, index) => (
+      {/* Theft items section */}
+      <div className="grid grid-cols-4 gap-4">
+        {Object.keys(items).map((category, index) => (
           <div key={index} className="p-4 bg-gray-100 rounded-lg shadow-md">
-            <h3 className="text-xl font-semibold">{item.name}</h3>
+            <h3 className="text-xl font-semibold">{category}</h3>
             <img
-              src={item.types[0].image}
-              alt={item.name}
+              src={categoryImages[category]} // Show category image
+              alt={category}
               className="w-full h-auto my-2"
             />
             <button
               className="bg-blue-500 text-white px-4 py-2 rounded-md mt-2"
-              onClick={() => stealItem(item.name)}
+              onClick={() => stealItem(category)}
             >
-              Steal from {item.name}
+              Attempt Theft
             </button>
           </div>
         ))}

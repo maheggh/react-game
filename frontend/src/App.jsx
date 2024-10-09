@@ -6,6 +6,7 @@ import CarTheft from "./pages/CarTheft";
 import Login from './components/Login'; // Import Login component
 import NavBar from "./components/NavBar"; 
 import ProtectedRoute from "./components/ProtectedRoute"; 
+import Theft from "./pages/Theft";
 
 const App = () => {
   return (
@@ -39,7 +40,7 @@ const App = () => {
           path="/theft"
           element={
             <ProtectedRoute>
-              <CarTheft />
+              <Theft />
             </ProtectedRoute>
           }
         />
