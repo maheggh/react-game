@@ -2,28 +2,18 @@ import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 
 const CarTheft = () => {
-  const { user } = useContext(AuthContext); // Get user info to determine rank
-  const [stolenCars, setStolenCars] = useState(
-    JSON.parse(localStorage.getItem('stolenCars')) || []
-  );
-  const [money, setMoney] = useState(
-    parseInt(localStorage.getItem('money')) || 0
-  );
-  const [inJail, setInJail] = useState(
-    localStorage.getItem('inJail') === 'true'
-  );
-  const [jailTime, setJailTime] = useState(
-    parseInt(localStorage.getItem('jailTime')) || 30
-  );
+  const { user } = useContext(AuthContext);
+  const [stolenCars, setStolenCars] = useState([]);
+  const [money, setMoney] = useState(0);
+  const [inJail, setInJail] = useState(false);
+  const [jailTime, setJailTime] = useState(30);
   const [successMessage, setSuccessMessage] = useState('');
   const [failureMessage, setFailureMessage] = useState('');
   const [attemptedBreakout, setAttemptedBreakout] = useState(false);
   const [showGarage, setShowGarage] = useState(false);
 
-  // Dynamic steal chance adjustment based on rank
   const rank = user && user.rank ? user.rank : 1;
 
-  // Adjusting steal chances and values for each venue
   const venues = {
     'Rich Potato Neighborhood': {
       cars: [
@@ -32,8 +22,8 @@ const CarTheft = () => {
         { name: 'Potato Convertible', price: 30000, baseChance: 10, image: '/assets/potato-convertible.png' },
         { name: 'SUV Spud', price: 2000, baseChance: 20, image: '/assets/suv-spud.png' }
       ],
-      image: '/assets/rich.png', // Neighbourhood image
-      baseStealChance: 5 // Base chance for the rich neighbourhood
+      image: '/assets/rich.png',
+      baseStealChance: 5
     },
     'Spudville Downtown': {
       cars: [
@@ -42,7 +32,7 @@ const CarTheft = () => {
         { name: 'SUV Tater', price: 25000, baseChance: 8, image: '/assets/suv-tater.png' },
         { name: 'Spudnik Sports', price: 90000, baseChance: 4, image: '/assets/spudnik-sports.png' }
       ],
-      image: '/assets/downtown.png', // Neighbourhood image
+      image: '/assets/downtown.png',
       baseStealChance: 10
     },
     'Fries End Suburbs': {
@@ -52,7 +42,7 @@ const CarTheft = () => {
         { name: 'Wedge Wagon', price: 20000, baseChance: 15, image: '/assets/wedge-wagon.png' },
         { name: 'Crispy Convertible', price: 110000, baseChance: 5, image: '/assets/crispy-convertible.png' }
       ],
-      image: '/assets/fries.png', // Neighbourhood image
+      image: '/assets/fries.png',
       baseStealChance: 15
     },
     'Mashy Meadows': {
@@ -62,7 +52,7 @@ const CarTheft = () => {
         { name: 'Gravy Sedan', price: 12000, baseChance: 15, image: '/assets/gravy-sedan.png' },
         { name: 'Peeler Pickup', price: 18000, baseChance: 5, image: '/assets/peeler-pickup.png' }
       ],
-      image: '/assets/mashy.png', // Neighbourhood image
+      image: '/assets/mashy.png',
       baseStealChance: 20
     },
     'Tuber Town': {
@@ -72,86 +62,106 @@ const CarTheft = () => {
         { name: 'Starch Sedan', price: 15000, baseChance: 15, image: '/assets/starch-sedan.png' },
         { name: 'Tuber Truck', price: 60000, baseChance: 5, image: '/assets/tuber-truck.png' }
       ],
-      image: '/assets/tuber.png', // Neighbourhood image
+      image: '/assets/tuber.png',
       baseStealChance: 25
     }
   };
-
   useEffect(() => {
-    // Save to localStorage when state updates
-    localStorage.setItem('stolenCars', JSON.stringify(stolenCars));
-    localStorage.setItem('money', money.toString());
-    localStorage.setItem('inJail', inJail.toString());
-    localStorage.setItem('jailTime', jailTime.toString());
-  }, [stolenCars, money, inJail, jailTime]);
+    const fetchUserData = async () => {
+      try {
+        const response = await fetch('/api/users/profile', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        const data = await response.json();
+        if (data.success) {
+          setStolenCars(data.userData.cars);
+          setMoney(data.userData.money);
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  // Jail Timer - Automatically release from jail when timer reaches 0
+  useEffect(() => {
+    if (inJail && jailTime > 0) {
+      const jailTimer = setInterval(() => {
+        setJailTime(prevTime => prevTime - 1);
+      }, 1000);
+
+      return () => clearInterval(jailTimer); // Clear interval on unmount
+    } else if (jailTime === 0 && inJail) {
+      setInJail(false);
+      setSuccessMessage('You are free from jail!');
+    }
+  }, [inJail, jailTime]);
 
   const calculateStealChance = (baseChance) => {
-    // Make sure the steal chance is capped at 90% max to keep the game balanced
     const adjustedChance = baseChance + rank * 2;
     return Math.min(adjustedChance, 90);
   };
 
-  const stealCar = (venueName) => {
+  const stealCar = async (venueName) => {
     if (inJail) {
       setFailureMessage('You cannot steal cars while in jail!');
       return;
     }
-  
+
     const venue = venues[venueName];
-  
-    // Make sure baseStealChance is valid
-    if (!venue || typeof venue.baseStealChance !== 'number') {
-      console.error(`Invalid base steal chance for ${venueName}`);
-      setFailureMessage('Invalid venue data.');
-      return;
-    }
-  
-    const stealChance = calculateStealChance(venue.baseStealChance); // Calculate based on rank
+    const stealChance = calculateStealChance(venue.baseStealChance);
     const carRoll = Math.floor(Math.random() * 100) + 1;
-  
-    console.log(`Steal attempt at ${venueName} with a steal chance of ${stealChance}%`);
-    console.log(`Random roll: ${carRoll}`);
-  
+
     if (carRoll <= stealChance) {
       const car = getRandomCar(venue.cars);
-      setStolenCars((prevCars) => [...prevCars, car]);
+      const updatedCars = [...stolenCars, car];
+
+      setStolenCars(updatedCars); // Only add the car to garage; do not add money
+
+      await updateUserData(updatedCars); // Update backend without money
+
       setSuccessMessage(`You successfully stole a ${car.name}!`);
       setFailureMessage('');
     } else {
+      setFailureMessage('You failed to steal the car.');
       const failureRoll = Math.random() * 100;
-      if (failureRoll <= 30) {
-        setFailureMessage(getCarTheftFailureScenario());
-      } else {
-        setFailureMessage('You got caught and sent to jail!');
+      if (failureRoll > 30) {
         sendToJail();
       }
-      setSuccessMessage('');
+    }
+  };
+
+  const updateUserData = async (updatedCars) => {
+    try {
+      await fetch('/api/users/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({ cars: updatedCars }),
+      });
+    } catch (error) {
+      console.error('Error updating user data:', error);
     }
   };
 
   const getRandomCar = (cars) => {
-    let totalChance = cars.reduce((sum, car) => sum + car.baseChance, 0); // Sum all car chances
-    let randomNum = Math.random() * totalChance; // Get a random number within that total range
-  
+    let totalChance = cars.reduce((sum, car) => sum + car.baseChance, 0);
+    let randomNum = Math.random() * totalChance;
+
     for (let car of cars) {
       if (randomNum < car.baseChance) {
-        return car; // Return the car that matches the random number
+        return car;
       }
-      randomNum -= car.baseChance; // Subtract car's chance from random number
+      randomNum -= car.baseChance;
     }
-  
-    return cars[cars.length - 1]; // Fallback to last car (though this should not happen)
-  };
 
-  // **Add this function**: Generates random car theft failure scenarios
-  const getCarTheftFailureScenario = () => {
-    const scenarios = [
-      "Your tools broke during the theft.",
-      "A security guard appeared, forcing you to flee.",
-      "The car alarm went off, attracting attention.",
-      "You were spotted by a passerby and had to abandon the attempt."
-    ];
-    return scenarios[Math.floor(Math.random() * scenarios.length)];
+    return cars[cars.length - 1];
   };
 
   const sendToJail = () => {
@@ -179,38 +189,44 @@ const CarTheft = () => {
 
   const toggleGarage = () => setShowGarage(!showGarage);
 
-  const cheat = () => {
-    console.log('Cheat activated: Free from jail, extra money!');
-    setInJail(false);
-    setMoney((prevMoney) => prevMoney + 50000);
+  const sellCar = async (index) => {
+    const car = stolenCars[index];
+    const updatedCars = stolenCars.filter((_, i) => i !== index);
+    const updatedMoney = money + car.price;
+
+    setStolenCars(updatedCars);
+    setMoney(updatedMoney);
+
+    await updateUserDataWithMoney(updatedCars, updatedMoney); // Now update with money
   };
 
-  const sellCar = (index) => {
-    const car = stolenCars[index];
-    setMoney((prevMoney) => prevMoney + car.price);
-    setStolenCars(stolenCars.filter((_, i) => i !== index));
+  const updateUserDataWithMoney = async (updatedCars, updatedMoney) => {
+    try {
+      await fetch('/api/users/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({ cars: updatedCars, money: updatedMoney }),
+      });
+    } catch (error) {
+      console.error('Error updating user data:', error);
+    }
   };
 
   return (
     <div className="container mx-auto p-4">
       <h2 className="text-2xl font-bold mb-4">Car Theft</h2>
 
-      {/* Venue section */}
       <div className="grid grid-cols-3 gap-4">
         {Object.keys(venues).map((venueName, index) => {
           const venue = venues[venueName];
           return (
             <div key={index} className="p-4 bg-gray-100 rounded-lg shadow-md">
               <h3 className="text-xl font-semibold">{venueName}</h3>
-              <img
-                src={venue.image}
-                alt={venueName}
-                className="w-full h-auto my-2"
-              />
-              <button
-                className="bg-blue-500 text-white px-4 py-2 rounded-md mt-2"
-                onClick={() => stealCar(venueName)}
-              >
+              <img src={venue.image} alt={venueName} className="w-full h-auto my-2" />
+              <button className="bg-blue-500 text-white px-4 py-2 rounded-md mt-2" onClick={() => stealCar(venueName)}>
                 Steal Car
               </button>
             </div>
@@ -218,35 +234,20 @@ const CarTheft = () => {
         })}
       </div>
 
-      {/* Result messages */}
-      {successMessage && (
-        <div className="text-green-500 mt-4">{successMessage}</div>
-      )}
-      {failureMessage && (
-        <div className="text-red-500 mt-4">{failureMessage}</div>
-      )}
+      {successMessage && <div className="text-green-500 mt-4">{successMessage}</div>}
+      {failureMessage && <div className="text-red-500 mt-4">{failureMessage}</div>}
 
-      {/* Jail breakout */}
       {inJail && (
         <div className="mt-4">
-          <p className="text-red-500">
-            You are in jail! Jail time left: {jailTime} seconds.
-          </p>
-          <button
-            className="bg-yellow-500 text-white px-4 py-2 rounded-md"
-            onClick={attemptBreakout}
-          >
+          <p className="text-red-500">You are in jail! Jail time left: {jailTime} seconds.</p>
+          <button className="bg-yellow-500 text-white px-4 py-2 rounded-md" onClick={attemptBreakout}>
             Attempt Breakout
           </button>
         </div>
       )}
 
-      {/* Garage section */}
       <div className="mt-4">
-        <button
-          className="bg-gray-600 text-white px-4 py-2 rounded-md"
-          onClick={toggleGarage}
-        >
+        <button className="bg-gray-600 text-white px-4 py-2 rounded-md" onClick={toggleGarage}>
           {showGarage ? 'Hide Garage' : 'Show Garage'}
         </button>
         {showGarage && (
@@ -254,16 +255,9 @@ const CarTheft = () => {
             {stolenCars.length > 0 ? (
               stolenCars.map((car, index) => (
                 <li key={index} className="flex items-center">
-                  <img
-                    src={car.image}
-                    alt={car.name}
-                    style={{ width: '100px', marginRight: '10px' }}
-                  />
+                  <img src={car.image} alt={car.name} style={{ width: '100px', marginRight: '10px' }} />
                   <span>{car.name} - ${car.price}</span>
-                  <button
-                    className="bg-green-500 text-white px-4 py-2 ml-4 rounded-md"
-                    onClick={() => sellCar(index)}
-                  >
+                  <button className="bg-green-500 text-white px-4 py-2 ml-4 rounded-md" onClick={() => sellCar(index)}>
                     Sell
                   </button>
                 </li>
@@ -275,17 +269,27 @@ const CarTheft = () => {
         )}
       </div>
 
-      {/* Money display */}
       <div className="mt-4">
         <p className="text-xl">Money: ${money}</p>
       </div>
 
-      {/* Cheat button */}
+      {/* Cheat button now lets you out of jail */}
       <div className="mt-4">
-        <button
-          className="bg-red-500 text-white px-4 py-2 rounded-md"
-          onClick={cheat}
-        >
+        <button className="bg-red-500 text-white px-4 py-2 rounded-md" onClick={async () => {
+          const updatedMoney = money + 50000;
+          setMoney(updatedMoney);
+          setInJail(false); // Cheat button now also gets you out of jail
+          setJailTime(0); // Reset jail time
+
+          await fetch('/api/users/update', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${localStorage.getItem('token')}`,
+            },
+            body: JSON.stringify({ money: updatedMoney }),
+          });
+        }}>
           Cheat
         </button>
       </div>

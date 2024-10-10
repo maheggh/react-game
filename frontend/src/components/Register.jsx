@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { AuthContext } from '/context/AuthContext';
+import { AuthContext } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const Register = () => {
@@ -11,7 +11,7 @@ const Register = () => {
 
   useEffect(() => {
     if (isLoggedIn) {
-      navigate('/userstatus'); // Redirect to UserStatus if already logged in
+      navigate('/userstatus'); 
     }
   }, [isLoggedIn, navigate]);
 
@@ -20,6 +20,8 @@ const Register = () => {
       const response = await fetch('/api/users/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        // If your backend expects any specific data, you might need to pass it in the body, e.g., username, password, etc.
+        body: JSON.stringify({})  // Empty body if backend generates username/password itself
       });
       const data = await response.json();
 
@@ -33,8 +35,8 @@ const Register = () => {
         setMessage('User registered successfully!');
 
         if (data.token) {
-          login(data.token); 
-          navigate('/'); 
+          login(data.token);
+          navigate('/userstatus'); // Navigate to user status page after registration
         }
       } else {
         setMessage(`Failed to register user: ${data.message}`);
@@ -47,14 +49,15 @@ const Register = () => {
   return (
     <div>
       <h2>Register to Play</h2>
-      <button onClick={registerUser}>
-        Generate Random Gangster Name
-      </button>
+      <button onClick={registerUser}>Generate Random Gangster Name</button>
+      
       {username && (
         <div>
-          <p>Username: {username}</p>
+          <p><strong>Username:</strong> {username}</p>
+          <p><strong>Password:</strong> {password}</p>
         </div>
       )}
+      
       {message && <p>{message}</p>}
     </div>
   );

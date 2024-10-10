@@ -1,135 +1,123 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-const { generateRandomGangsterName, generateRandomPassword } = require('../utils/nameGenerator');
+const User = require('../models/User'); // Import the User model
+const bcrypt = require('bcryptjs'); // Assuming bcrypt for password hashing
+const jwt = require('jsonwebtoken'); // Assuming jwt for token generation
 
 // Register User
-// Backend - userController.js
 exports.registerUser = async (req, res) => {
-  let username, password, existingUser;
   try {
-    // Generate random gangster name and password
-    do {
-      username = generateRandomGangsterName();
-      existingUser = await User.findOne({ username });
-    } while (existingUser);
-    
-    password = generateRandomPassword();
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const { username, password } = req.body;
 
+    const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new User({
       username,
       password: hashedPassword,
-      level: 1,
-      rank: 'Beginner',
-      money: 0,
+      money: 0, // Set default money and any other default fields here
       cars: [],
-      crimesPerformed: 0,
-      assassinationSuccessRate: 5,
-      carTheftSuccessRate: 10,
+      stolenItems: [],
     });
 
     await newUser.save();
 
-    const token = jwt.sign(
-      { userId: newUser._id, username: newUser.username },
-      process.env.TOKEN_SECRET,
-      { expiresIn: '1h' }
-    );
-
-    // Respond with the plain password (unhashed) for testing
-    res.status(201).json({
-      success: true,
-      username: newUser.username,
-      password, // plain password here
-      token,
-      message: 'User registered successfully!',
+    const token = jwt.sign({ userId: newUser._id }, process.env.TOKEN_SECRET, {
+      expiresIn: '1h',
     });
 
+    res.status(201).json({
+      success: true,
+      token,
+      message: 'User registered successfully',
+    });
   } catch (error) {
-    console.error('Error during registration:', error.message);
-    res.status(500).json({ success: false, message: 'Failed to register user', error: error.message });
+    console.error('Error registering user:', error);
+    res.status(500).json({ message: 'Failed to register user' });
   }
 };
 
-
+// Login User
 exports.loginUser = async (req, res) => {
-  const { username, password } = req.body;
-
-  // Ensure username and password are provided
-  if (!username || !password) {
-    return res.status(400).json({ success: false, message: 'Please provide both username and password' });
-  }
-
   try {
+    const { username, password } = req.body;
+
     const user = await User.findOne({ username });
     if (!user) {
-      console.error('Login failed: Username not found');
-      return res.status(400).json({ success: false, message: 'Invalid username or password' });
+      return res.status(404).json({ message: 'User not found' });
     }
-
-    // Debugging logs
-    console.log(`Checking password for user: ${username}`);
-    console.log(`Entered password: ${password}`);
-    console.log(`Hashed password in DB: ${user.password}`);
 
     const isMatch = await bcrypt.compare(password, user.password);
-    
     if (!isMatch) {
-      console.error(`Password does not match for user: ${username}`);
-      return res.status(400).json({ success: false, message: 'Invalid username or password' });
+      return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign(
-      { userId: user._id, username: user.username },
-      process.env.TOKEN_SECRET,
-      { expiresIn: '1h' }
-    );
+    const token = jwt.sign({ userId: user._id }, process.env.TOKEN_SECRET, {
+      expiresIn: '1h',
+    });
 
     res.json({
       success: true,
       token,
       userData: {
         username: user.username,
-        level: user.level,
-        rank: user.rank,
         money: user.money,
         cars: user.cars,
-        crimesPerformed: user.crimesPerformed,
-        assassinationSuccessRate: user.assassinationSuccessRate,
-        carTheftSuccessRate: user.carTheftSuccessRate,
+        stolenItems: user.stolenItems,
       },
     });
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Failed to login' });
+    console.error('Error logging in user:', error);
+    res.status(500).json({ message: 'Failed to login user' });
   }
 };
-
 
 // Get User Data (Protected Route)
 exports.getUserData = async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
     if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+      return res.status(404).json({ message: 'User not found' });
     }
 
     res.json({
       success: true,
       userData: {
         username: user.username,
-        level: user.level,
-        rank: user.rank,
         money: user.money,
         cars: user.cars,
-        crimesPerformed: user.crimesPerformed,
-        assassinationSuccessRate: user.assassinationSuccessRate,
-        carTheftSuccessRate: user.carTheftSuccessRate,
+        stolenItems: user.stolenItems,
       },
     });
   } catch (error) {
     console.error('Error fetching user data:', error);
-    res.status(500).json({ error: 'Failed to fetch user data' });
+    res.status(500).json({ message: 'Failed to fetch user data' });
+  }
+};
+
+// Update User Data
+exports.updateUserData = async (req, res) => {
+  try {
+    const { money, cars, stolenItems } = req.body;
+    const user = await User.findById(req.user.userId);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (money !== undefined) user.money = money;
+    if (cars !== undefined) user.cars = cars;
+    if (stolenItems !== undefined) user.stolenItems = stolenItems;
+
+    await user.save();
+
+    res.json({
+      success: true,
+      userData: {
+        username: user.username,
+        money: user.money,
+        cars: user.cars,
+        stolenItems: user.stolenItems,
+      },
+    });
+  } catch (error) {
+    console.error('Error updating user data:', error);
+    res.status(500).json({ message: 'Failed to update user data' });
   }
 };

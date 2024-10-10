@@ -7,6 +7,7 @@ import Login from './components/Login'; // Import Login component
 import NavBar from "./components/NavBar"; 
 import ProtectedRoute from "./components/ProtectedRoute"; 
 import Theft from "./pages/Theft";
+import Gambling from "./pages/Gambling";
 
 const App = () => {
   return (
@@ -41,6 +42,14 @@ const App = () => {
           element={
             <ProtectedRoute>
               <Theft />
+            </ProtectedRoute>
+          }
+          />
+          <Route
+          path="/gambling"
+          element={
+            <ProtectedRoute>
+              <Gambling />
             </ProtectedRoute>
           }
         />

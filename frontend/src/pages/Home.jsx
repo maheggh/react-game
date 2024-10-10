@@ -1,11 +1,11 @@
 import React, { useContext } from 'react';
-import { AuthContext } from '/context/AuthContext'; // Make sure the path is correct
+import { AuthContext } from '/context/AuthContext'; 
 import Register from '../components/Register';
 import Login from '../components/Login';
 import UserStatus from '../components/UserStatus';
 
 const Home = () => {
-  const { isLoggedIn } = useContext(AuthContext); // Check login status
+  const { isLoggedIn } = useContext(AuthContext); 
 
   return (
     <div className="bg-pink-100 p-6 md:p-12">

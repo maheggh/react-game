@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import styles from "../components/Navbar.module.css"; // Import CSS module
+import styles from "../components/Navbar.module.css"; 
 
 const NavBar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -26,8 +26,8 @@ const NavBar = () => {
           <Link to="/carraces" className={styles.navLink}>
             Car Races
           </Link>
-          <Link to="/smuggling" className={styles.navLink}>
-            Smuggling
+          <Link to="/gambling" className={styles.navLink}>
+            Gambling
           </Link>
           <Link to="/assassination" className={styles.navLink}>
             Assassination
@@ -63,8 +63,8 @@ const NavBar = () => {
           <Link to="/carraces" className={styles.mobileLink} onClick={toggleMenu}>
             Car Races
           </Link>
-          <Link to="/smuggling" className={styles.mobileLink} onClick={toggleMenu}>
-            Smuggling
+          <Link to="/gambling" className={styles.mobileLink} onClick={toggleMenu}>
+            Gambling
           </Link>
           <Link to="/assassination" className={styles.mobileLink} onClick={toggleMenu}>
             Assassination
