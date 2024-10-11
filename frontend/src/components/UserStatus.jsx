@@ -7,6 +7,9 @@ const UserStatus = () => {
   const [userData, setUserData] = useState(null);
   const [password, setPassword] = useState(''); // Store the password
   const [showPassword, setShowPassword] = useState(false); // Toggle visibility
+  const [showInventory, setShowInventory] = useState(false); // Toggle inventory visibility
+  const [showBossItems, setShowBossItems] = useState(false); // Toggle boss items visibility
+  const [showCars, setShowCars] = useState(false); // Toggle cars visibility
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -20,6 +23,7 @@ const UserStatus = () => {
 
         const data = await response.json();
         setUserData(data.userData);
+
         // Retrieve password from localStorage (for registration purposes)
         const storedPassword = localStorage.getItem('password');
         if (storedPassword) {
@@ -41,27 +45,33 @@ const UserStatus = () => {
   if (!userData) return <p>Loading user data...</p>;
 
   return (
-    <div>
-      <h2>Welcome, {userData.username}</h2>
-      <p>Level: {userData.level}</p>
-      <p>Rank: {userData.rank}</p>
-      <p>Money: ${userData.money}</p>
-      
+    <div className="container mx-auto p-4">
+      <h2 className="text-2xl font-bold">Welcome, {userData.username}</h2>
+      <p className="text-lg">Money: ${userData.money}</p>
+
       {/* Password display */}
       {password && (
-        <p>
-          Password: 
-          <span>{showPassword ? password : '••••••••'}</span>
-          <button
-            onClick={() => setShowPassword(!showPassword)}
-            style={{ marginLeft: '10px', cursor: 'pointer' }}
-          >
-            {showPassword ? '🙈' : '👁️'}
-          </button>
-        </p>
+        <div className="my-4">
+          <p>
+            Password: 
+            <span>{showPassword ? password : '••••••••'}</span>
+            <button
+              onClick={() => setShowPassword(!showPassword)}
+              className="ml-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
+            >
+              {showPassword ? '🙈 Hide' : '👁️ Show'}
+            </button>
+          </p>
+        </div>
       )}
 
-      <button onClick={handleLogout}>Logout</button>
+
+      <button
+        onClick={handleLogout}
+        className="mt-6 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+      >
+        Logout
+      </button>
     </div>
   );
 };

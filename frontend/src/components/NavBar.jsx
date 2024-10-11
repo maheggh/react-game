@@ -32,7 +32,10 @@ const NavBar = () => {
           <Link to="/assassination" className={styles.navLink}>
             Assassination
           </Link>
-          <Link to="/store" className={styles.navLink}>
+          <Link to="/bosses" className={styles.navLink}>
+            Bosses
+          </Link>
+          <Link to="/WeaponStore" className={styles.navLink}>
             Weapon Store
           </Link>
           <Link to="/score" className={styles.navLink}>
@@ -69,7 +72,10 @@ const NavBar = () => {
           <Link to="/assassination" className={styles.mobileLink} onClick={toggleMenu}>
             Assassination
           </Link>
-          <Link to="/store" className={styles.mobileLink} onClick={toggleMenu}>
+          <Link to="/bosses" className={styles.mobileLink} onClick={toggleMenu}>
+            Bosses
+          </Link>
+          <Link to="/WeaponStore" className={styles.mobileLink} onClick={toggleMenu}>
             Weapon Store
           </Link>
           <Link to="/score" className={styles.mobileLink} onClick={toggleMenu}>

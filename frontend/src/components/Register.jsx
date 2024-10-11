@@ -11,32 +11,33 @@ const Register = () => {
 
   useEffect(() => {
     if (isLoggedIn) {
-      navigate('/userstatus'); 
+      navigate('/');
     }
   }, [isLoggedIn, navigate]);
 
+  // Generate random username and password on the backend
   const registerUser = async () => {
     try {
       const response = await fetch('/api/users/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // If your backend expects any specific data, you might need to pass it in the body, e.g., username, password, etc.
-        body: JSON.stringify({})  // Empty body if backend generates username/password itself
+        body: JSON.stringify({})  // Sending an empty body; the backend will generate username/password
       });
+
       const data = await response.json();
 
       if (response.ok) {
-        setUsername(data.username);
-        setPassword(data.password);
+        setUsername(data.username);  // Set the generated username
+        setPassword(data.password);  // Set the generated password
 
-        // Store password in localStorage so it can be retrieved later
+        // Store password locally (useful for the user to see their password)
         localStorage.setItem('password', data.password);
 
         setMessage('User registered successfully!');
 
         if (data.token) {
-          login(data.token);
-          navigate('/userstatus'); // Navigate to user status page after registration
+          login(data.token);  // Automatically log the user in after registration
+          navigate('/');  // Redirect to user status page
         }
       } else {
         setMessage(`Failed to register user: ${data.message}`);
@@ -49,15 +50,19 @@ const Register = () => {
   return (
     <div>
       <h2>Register to Play</h2>
-      <button onClick={registerUser}>Generate Random Gangster Name</button>
       
+      {/* Button to generate random username and password */}
+      <button onClick={registerUser}>Generate Random Gangster Name</button>
+
+      {/* Display the generated username and password */}
       {username && (
         <div>
           <p><strong>Username:</strong> {username}</p>
           <p><strong>Password:</strong> {password}</p>
         </div>
       )}
-      
+
+      {/* Display registration message (success or error) */}
       {message && <p>{message}</p>}
     </div>
   );

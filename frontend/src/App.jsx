@@ -8,6 +8,9 @@ import NavBar from "./components/NavBar";
 import ProtectedRoute from "./components/ProtectedRoute"; 
 import Theft from "./pages/Theft";
 import Gambling from "./pages/Gambling";
+import WeaponStore from "./pages/WeaponStore";
+import Bosses from "./pages/Bosses";
+import ScoreScreen from "./pages/Score";
 
 const App = () => {
   return (
@@ -50,6 +53,30 @@ const App = () => {
           element={
             <ProtectedRoute>
               <Gambling />
+            </ProtectedRoute>
+          }
+        />
+                  <Route
+          path="/weaponstore"
+          element={
+            <ProtectedRoute>
+              <WeaponStore />
+            </ProtectedRoute>
+          }
+        />
+                          <Route
+          path="/Bosses"
+          element={
+            <ProtectedRoute>
+              <Bosses />
+            </ProtectedRoute>
+          }
+        />
+                                  <Route
+          path="/Score"
+          element={
+            <ProtectedRoute>
+              <ScoreScreen />
             </ProtectedRoute>
           }
         />

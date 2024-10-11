@@ -1,31 +1,43 @@
-const User = require('../models/User'); // Import the User model
-const bcrypt = require('bcryptjs'); // Assuming bcrypt for password hashing
-const jwt = require('jsonwebtoken'); // Assuming jwt for token generation
+const User = require('../models/User');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { generateRandomGangsterName, generateRandomPassword } = require('../utils/nameGenerator'); // Import name generator
 
 // Register User
 exports.registerUser = async (req, res) => {
   try {
-    const { username, password } = req.body;
+    // Generate random gangster username and password
+    const randomUsername = generateRandomGangsterName();
+    const randomPassword = generateRandomPassword();
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Hash the generated password
+    const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+    // Create new user with random credentials
     const newUser = new User({
-      username,
+      username: randomUsername,
       password: hashedPassword,
-      money: 0, // Set default money and any other default fields here
-      cars: [],
-      stolenItems: [],
+      money: 0, // Set default money
+      cars: [], // Initialize cars array
+      stolenItems: [], // Initialize stolenItems array
+      inventory: [], // Initialize inventory for new user
+      bossItems: [], // Initialize bossItems for new user
     });
 
+    // Save the new user to the database
     await newUser.save();
 
+    // Generate JWT token
     const token = jwt.sign({ userId: newUser._id }, process.env.TOKEN_SECRET, {
-      expiresIn: '1h',
+      expiresIn: '24h',
     });
 
+    // Respond with generated username, password, and token
     res.status(201).json({
       success: true,
       token,
-      message: 'User registered successfully',
+      username: randomUsername,  // Send back generated username
+      password: randomPassword,  // Send back generated password
     });
   } catch (error) {
     console.error('Error registering user:', error);
@@ -38,20 +50,24 @@ exports.loginUser = async (req, res) => {
   try {
     const { username, password } = req.body;
 
+    // Find user by username
     const user = await User.findOne({ username });
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // Compare provided password with hashed password in the database
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
+    // Generate JWT token
     const token = jwt.sign({ userId: user._id }, process.env.TOKEN_SECRET, {
       expiresIn: '1h',
     });
 
+    // Respond with user data and token
     res.json({
       success: true,
       token,
@@ -60,6 +76,8 @@ exports.loginUser = async (req, res) => {
         money: user.money,
         cars: user.cars,
         stolenItems: user.stolenItems,
+        inventory: user.inventory,  // Include inventory in response
+        bossItems: user.bossItems,  // Include bossItems in response
       },
     });
   } catch (error) {
@@ -76,6 +94,7 @@ exports.getUserData = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // Respond with user data
     res.json({
       success: true,
       userData: {
@@ -83,6 +102,8 @@ exports.getUserData = async (req, res) => {
         money: user.money,
         cars: user.cars,
         stolenItems: user.stolenItems,
+        inventory: user.inventory,  // Include inventory in response
+        bossItems: user.bossItems,  // Include bossItems in response
       },
     });
   } catch (error) {
@@ -91,10 +112,10 @@ exports.getUserData = async (req, res) => {
   }
 };
 
-// Update User Data
+// Update User Data (to handle rank progression)
 exports.updateUserData = async (req, res) => {
   try {
-    const { money, cars, stolenItems } = req.body;
+    const { money, cars, stolenItems, inventory, bossItems, missionsCompleted } = req.body;
     const user = await User.findById(req.user.userId);
 
     if (!user) {
@@ -104,6 +125,14 @@ exports.updateUserData = async (req, res) => {
     if (money !== undefined) user.money = money;
     if (cars !== undefined) user.cars = cars;
     if (stolenItems !== undefined) user.stolenItems = stolenItems;
+    if (inventory !== undefined) user.inventory = inventory;
+    if (bossItems !== undefined) user.bossItems = bossItems;
+    if (missionsCompleted !== undefined) user.missionsCompleted = missionsCompleted;
+
+    // Calculate new rank based on missionsCompleted (e.g., rank up every 10 missions)
+    if (missionsCompleted !== undefined) {
+      user.rank = Math.floor(missionsCompleted / 10) + 1; // Adjust rank as needed
+    }
 
     await user.save();
 
@@ -114,6 +143,10 @@ exports.updateUserData = async (req, res) => {
         money: user.money,
         cars: user.cars,
         stolenItems: user.stolenItems,
+        inventory: user.inventory,
+        bossItems: user.bossItems,
+        missionsCompleted: user.missionsCompleted,
+        rank: user.rank, // Send updated rank back
       },
     });
   } catch (error) {

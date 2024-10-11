@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import styles from './Gambling.module.css'; // Assuming your CSS is here
+import styles from './Gambling.module.css'; 
 
 const GamblingPage = () => {
   const canvasRef = useRef(null); // Reference for the wheel canvas
@@ -112,10 +112,10 @@ const GamblingPage = () => {
 
   return (
     <div className={styles.gamblingContainer}>
-      <h2>Wheel of Fortune</h2>
+      <h2 className='text-3xl m-4 bg-blue-200 .rounded-2xl w-60 h-10'>Wheel of Fortune</h2>
       <p>Your Balance: ${money}</p>
       <p>Ticket cost: $250</p>
-
+      <div className={styles.pointer}></div>
       <div className={styles.wheelContainer}>
         <canvas ref={canvasRef} width="400" height="400"></canvas> 
         <button id="spin" className={styles.spinButton} onClick={spinWheel} disabled={spinning}>
@@ -123,7 +123,7 @@ const GamblingPage = () => {
         </button>
       </div>
 
-      <p id="resultText" ref={resultTextRef}></p>
+      <p id="resultText" className='p-4 text-xl bg-gray-200' ref={resultTextRef}></p>
     </div>
   );
 };

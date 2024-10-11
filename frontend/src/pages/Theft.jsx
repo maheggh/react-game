@@ -247,7 +247,7 @@ const Theft = () => {
           onClick={() => {
             const updatedMoney = money + 50000;
             setMoney(updatedMoney);
-            setInJail(false); // Cheat to get out of jail
+            setInJail(false); 
             setJailTime(0);
             updateUserData({ money: updatedMoney, inJail: false, jailTime: 0 });
           }}

@@ -1,4 +1,4 @@
-/* Container to center wheel and button */
+
 .gamblingContainer {
   display: flex;
   flex-direction: column;
@@ -6,6 +6,15 @@
   justify-content: center;
   text-align: center;
   margin-top: 100px; 
+}
+
+.pointer {
+  margin-top: 20px;
+  width: 0; 
+  height: 0; 
+  border-left: 20px solid transparent;
+  border-right: 20px solid transparent;
+  border-top: 20px solid rgb(0, 255, 98);
 }
 
 .wheelContainer {
@@ -23,7 +32,6 @@ canvas {
   background: white;
 }
 
-/* Cool and stylized button */
 .spinButton {
   margin-top: 20px;
   background-color: #4CAF50;
@@ -50,7 +58,7 @@ canvas {
 /* Mobile responsiveness */
 @media (max-width: 600px) {
   .gamblingContainer {
-    margin-top: 20px;
+    margin-top: 20%;
   }
 
   .spinButton {
