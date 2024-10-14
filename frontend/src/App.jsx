@@ -11,6 +11,7 @@ import Gambling from "./pages/Gambling";
 import WeaponStore from "./pages/WeaponStore";
 import Bosses from "./pages/Bosses";
 import ScoreScreen from "./pages/Score";
+import RankNavbar from "./components/RankNavBar";
 
 const App = () => {
   return (
@@ -81,6 +82,7 @@ const App = () => {
           }
         />
       </Routes>
+      <RankNavbar />
     </Router>
   );
 };

@@ -27,11 +27,11 @@ const Register = () => {
       const data = await response.json();
 
       if (response.ok) {
-        setUsername(data.username);  // Set the generated username
-        setPassword(data.password);  // Set the generated password
+        setUsername(data.userData.username);  // Set the generated username
+        setPassword(data.userData.password);  // Set the generated password
 
         // Store password locally (useful for the user to see their password)
-        localStorage.setItem('password', data.password);
+        localStorage.setItem('password', data.userData.password);
 
         setMessage('User registered successfully!');
 
@@ -43,6 +43,7 @@ const Register = () => {
         setMessage(`Failed to register user: ${data.message}`);
       }
     } catch (error) {
+      console.error('Error registering user:', error);
       setMessage('Error registering user');
     }
   };

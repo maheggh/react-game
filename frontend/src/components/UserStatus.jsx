@@ -20,20 +20,24 @@ const UserStatus = () => {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
           },
         });
-
+  
         const data = await response.json();
         setUserData(data.userData);
-
+  
         // Retrieve password from localStorage (for registration purposes)
         const storedPassword = localStorage.getItem('password');
+        console.log('Stored password in localStorage:', storedPassword);  // Log to check
         if (storedPassword) {
           setPassword(storedPassword); // Set the password
+        } else {
+          console.log('No password found in localStorage'); // Debugging message
         }
       };
-
+  
       fetchUserData();
     }
   }, [isLoggedIn]);
+  
 
   const handleLogout = () => {
     logout();
@@ -48,6 +52,7 @@ const UserStatus = () => {
     <div className="container mx-auto p-4">
       <h2 className="text-2xl font-bold">Welcome, {userData.username}</h2>
       <p className="text-lg">Money: ${userData.money}</p>
+
 
       {/* Password display */}
       {password && (
