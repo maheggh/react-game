@@ -5,11 +5,13 @@ const Theft = () => {
   const { user, xp, rank, money, updateUserData } = useContext(AuthContext);
   const [stolenItems, setStolenItems] = useState([]);
   const [inJail, setInJail] = useState(false);
-  const [jailTime, setJailTime] = useState(0); 
+  const [jailTime, setJailTime] = useState(0);
   const [successMessage, setSuccessMessage] = useState('');
   const [failureMessage, setFailureMessage] = useState('');
-  const [showPocket, setShowPocket] = useState(false);
+  const [showPocket, setShowPocket] = useState(false);  // Initialize showPocket state
+  const [isLoading, setIsLoading] = useState(false);
 
+  // Define items available for theft
   const items = {
     'Purse': [
       { name: 'Slim Purse', price: 50, baseChance: 40, image: '/assets/slim-purse.png' },
@@ -43,7 +45,6 @@ const Theft = () => {
 
       return () => clearInterval(jailTimer); // Clean up interval on unmount
     } else if (jailTime === 0 && inJail) {
-      // Automatically release from jail when timer runs out
       setInJail(false);
       setSuccessMessage('You are free from jail!');
       updateUserData({ inJail: false, jailTime: 0 });
@@ -51,30 +52,39 @@ const Theft = () => {
   }, [inJail, jailTime, updateUserData]);
 
   const stealItem = async (category) => {
+    if (inJail || isLoading) return; // Prevent stealing while in jail
+
+    setSuccessMessage('');
+    setFailureMessage('');
+    setIsLoading(true);
+
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('/api/theft/steal', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`, 
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ itemType: category }),
       });
-      
+
       const data = await response.json();
       if (response.ok) {
         setSuccessMessage(data.message);
-        setStolenItems([...stolenItems, data.stolenItem]); 
+        setStolenItems([...stolenItems, data.stolenItem]);
+        updateUserData({ xp: data.xp, rank: data.rank });
       } else if (response.status === 403 && data.inJail) {
-        setFailureMessage(data.message); 
+        setFailureMessage(data.message);
         setInJail(true);
-        setJailTime(data.jailTime); 
+        setJailTime(data.jailTime);
       } else {
         setFailureMessage(data.message);
       }
     } catch (error) {
       setFailureMessage('An error occurred.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -85,20 +95,20 @@ const Theft = () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ itemName: item.name })
     });
 
     const data = await response.json();
     if (response.ok) {
-      setSuccessMessage(data.message); 
+      setSuccessMessage(data.message);
       const updatedItems = [...stolenItems];
-      updatedItems.splice(index, 1); 
+      updatedItems.splice(index, 1); // Remove sold item from pocket
       setStolenItems(updatedItems);
       updateUserData({ money: data.money });
     } else {
-      setFailureMessage(data.message); 
+      setFailureMessage(data.message);
     }
   };
 
@@ -106,8 +116,8 @@ const Theft = () => {
     const xpToAdd = 50;
     const updatedMoney = money + 50000;
 
-    setInJail(false); 
-    setJailTime(0); 
+    setInJail(false);
+    setJailTime(0);
 
     await updateUserData({ xp: xp + xpToAdd, money: updatedMoney, inJail: false, jailTime: 0 });
   };
@@ -129,8 +139,9 @@ const Theft = () => {
             <button
               className="bg-blue-500 text-white px-4 py-2 rounded-md mt-2"
               onClick={() => stealItem(category)}
+              disabled={inJail || isLoading} // Disable button if in jail or loading
             >
-              Attempt Theft
+              {isLoading ? 'Stealing...' : 'Attempt Theft'}
             </button>
           </div>
         ))}
@@ -141,9 +152,7 @@ const Theft = () => {
 
       {inJail && (
         <div className="mt-4">
-          <p className="text-red-500">
-            You are in jail! Jail time left: {jailTime} seconds.
-          </p>
+          <p className="text-red-500">You are in jail! Jail time left: {jailTime} seconds.</p>
         </div>
       )}
 
@@ -151,7 +160,7 @@ const Theft = () => {
       <div className="mt-4">
         <button
           className="bg-gray-600 text-white px-4 py-2 rounded-md"
-          onClick={() => setShowPocket(!showPocket)}
+          onClick={() => setShowPocket(!showPocket)}  // Toggle pocket visibility
         >
           {showPocket ? 'Hide Pocket' : 'Show Pocket'}
         </button>

@@ -1,58 +1,49 @@
 const User = require('../models/User');
-const { getRankForXp } = require('../utils/rankCalculator'); // Import rank calculator
+const { getRankForXp } = require('../utils/rankCalculator');
 
 // Steal an item
 exports.stealItem = async (req, res) => {
   try {
-    const { userId } = req.user; // Authenticated user ID
-    const { itemType } = req.body; // Expecting an item type (e.g., Purse, Jewelry)
+    const { userId } = req.user;
+    const { itemType } = req.body;
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // Check if the user is in jail
     if (user.inJail) {
       return res.status(403).json({ message: 'You cannot steal while in jail!' });
     }
 
-    // Define available items
     const items = {
       'Purse': [
-        { name: 'Slim Purse', price: 50, baseChance: 40, image: '/assets/slim-purse.png' },
-        { name: 'Fat Purse', price: 200, baseChance: 25, image: '/assets/fat-purse.png' }
+        { name: 'Slim Purse', price: 50, baseChance: 40 },
+        { name: 'Fat Purse', price: 200, baseChance: 25 }
       ],
       'Jewelry': [
-        { name: 'Diamond', price: 5000, baseChance: 10, image: '/assets/diamond.png' },
-        { name: 'Ruby', price: 3000, baseChance: 15, image: '/assets/ruby.png' }
+        { name: 'Diamond', price: 5000, baseChance: 10 },
+        { name: 'Ruby', price: 3000, baseChance: 15 }
       ],
       'ATM': [
-        { name: 'ATM Money', price: 1000, baseChance: 30, image: '/assets/atm.png' }
+        { name: 'ATM Money', price: 1000, baseChance: 30 }
       ],
       'Bank': [
-        { name: 'Bank Money', price: 50000, baseChance: 5, image: '/assets/bank.png' }
+        { name: 'Bank Money', price: 50000, baseChance: 5 }
       ]
     };
 
     const availableItems = items[itemType];
     if (!availableItems) return res.status(400).json({ message: 'Invalid item type' });
 
-    // Randomly select an item to steal
     const selectedItem = getRandomItem(availableItems);
-
-    // Calculate steal chance (using baseChance instead of chance)
-    const stealChance = Math.max(Math.min(selectedItem.baseChance + user.level * 5, 90), 20); // Adjusted chance
-
-    // Simulate the theft (random roll)
+    const stealChance = Math.min(selectedItem.baseChance + user.level * 5, 90);
     const roll = Math.floor(Math.random() * 100) + 1;
-    console.log(`Steal chance: ${stealChance}, Roll: ${roll}`); // Log chance and roll
+
     if (roll <= stealChance) {
       // Successful theft
       user.stolenItems.push(selectedItem);
-
-      // Gain XP and update rank
       const xpGained = 50;
       user.xp += xpGained;
-      user.rank = getRankForXp(user.xp); // Update rank based on XP
+      user.rank = getRankForXp(user.xp).currentRank;
 
       await user.save();
 
@@ -65,13 +56,14 @@ exports.stealItem = async (req, res) => {
     } else {
       // Failed theft - Send to jail
       user.inJail = true;
-      user.jailTime = 30; // Set jail time (e.g., 30 seconds)
+      const jailTime = 30 * 1000; // 30 seconds in milliseconds
+      user.jailTimeEnd = Date.now() + jailTime; // Set jail time end based on current timestamp
       await user.save();
 
       return res.status(403).json({
         message: 'You got caught and sent to jail!',
         inJail: true,
-        jailTime: user.jailTime,
+        jailTime: Math.ceil(jailTime / 1000), // Send jail time in seconds
       });
     }
   } catch (error) {
@@ -79,6 +71,7 @@ exports.stealItem = async (req, res) => {
     return res.status(500).json({ message: 'Server error during theft', error: error.message });
   }
 };
+
 
 // Sell stolen item
 exports.sellItem = async (req, res) => {

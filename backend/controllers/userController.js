@@ -103,6 +103,9 @@ exports.getUserData = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // Calculate the rank and next rank details
+    const rankInfo = getRankForXp(user.xp);
+
     res.json({
       success: true,
       userData: {
@@ -112,8 +115,11 @@ exports.getUserData = async (req, res) => {
         stolenItems: user.stolenItems,
         inventory: user.inventory,
         bossItems: user.bossItems,
-        xp: user.xp, 
-        rank: user.rank,
+        xp: user.xp,  // Current XP
+        rank: rankInfo.currentRank, // Current rank
+        nextRank: rankInfo.nextRank,  // Next rank
+        nextRankThreshold: rankInfo.nextRankThreshold, // XP needed for next rank
+        currentRankThreshold: rankInfo.currentRankThreshold,  // XP threshold for current rank
       },
     });
   } catch (error) {
@@ -121,6 +127,7 @@ exports.getUserData = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch user data' });
   }
 };
+
 
 exports.updateUserData = async (req, res) => {
   try {
@@ -157,5 +164,41 @@ exports.updateUserData = async (req, res) => {
   } catch (error) {
     console.error('Error updating user data:', error);
     res.status(500).json({ message: 'Failed to update user data' });
+  }
+};
+
+// Get the remaining jail time
+exports.startJailTime = async (user, jailDurationInSeconds) => {
+  user.inJail = true;
+  const jailTimeEnd = Date.now() + jailDurationInSeconds * 1000; // Store the future release time in milliseconds
+  user.jailTimeEnd = jailTimeEnd;
+  await user.save();
+};
+
+// Get the remaining jail time for the user
+exports.getJailTime = async (req, res) => {
+  try {
+    const { userId } = req.user;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (!user.inJail) {
+      return res.status(200).json({ inJail: false, message: 'User is not in jail' });
+    }
+
+    const jailTimeLeft = Math.max(0, user.jailTimeEnd - Date.now());
+    if (jailTimeLeft > 0) {
+      return res.status(200).json({ inJail: true, jailTime: Math.ceil(jailTimeLeft / 1000) });
+    } else {
+      // Release user if jail time is up
+      user.inJail = false;
+      user.jailTimeEnd = null;
+      await user.save();
+      return res.status(200).json({ inJail: false, message: 'User has been released from jail' });
+    }
+  } catch (error) {
+    console.error('Error fetching jail time:', error.message);
+    return res.status(500).json({ message: 'Server error fetching jail time', error: error.message });
   }
 };
