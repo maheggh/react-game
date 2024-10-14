@@ -3,16 +3,15 @@ import { AuthContext } from '../../context/AuthContext';
 import styles from './RankNavBar.module.css';
 
 const RankNavbar = () => {
-  const { user, xp, rank, updateUserData } = useContext(AuthContext); // Get the user data and updater function from context
+  const { user, xp, rank, updateUserData } = useContext(AuthContext);
   const [nextRankThreshold, setNextRankThreshold] = useState(1000);
   const [xpForNextLevel, setXpForNextLevel] = useState(0);
+  const [collapsed, setCollapsed] = useState(true); // State to toggle collapsed/expanded
 
-  // Calculate the progress to the next rank
   const progressToNextRank = xp && nextRankThreshold
     ? ((xp / nextRankThreshold) * 100).toFixed(2)
     : 0;
 
-  // Fetch or update user data when the component mounts or when user XP changes
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -37,18 +36,27 @@ const RankNavbar = () => {
       }
     };
 
-    fetchUserData(); // Fetch user data initially
-  }, [xp]); // Re-fetch when XP changes
+    fetchUserData();
+  }, [xp, updateUserData]);
+
+  const toggleCollapse = () => {
+    setCollapsed(!collapsed);
+  };
 
   return (
-    <div style={styles.navbar}>
-      <div style={styles.rankInfo}>
-        <p>Your Rank: {rank}</p>
-        <p>XP: {xp}/{nextRankThreshold} (Next Rank in {xpForNextLevel} XP)</p>
-        <div style={styles.progressBar}>
-          <div style={{ ...styles.progress, width: `${progressToNextRank}%` }}></div>
-        </div>
+    <div className={`${styles.navbar} ${collapsed ? styles.collapsed : ''}`}>
+      <div className={styles.toggleButton} onClick={toggleCollapse}>
+        {collapsed ? 'Show Rank' : 'Hide Rank'}
       </div>
+      {!collapsed && (
+        <div className={styles.rankInfo}>
+          <p>Your Rank: {rank}</p>
+          <p>XP: {xp}/{nextRankThreshold} (Next Rank in {xpForNextLevel} XP)</p>
+          <div className={styles.progressBar}>
+            <div className={styles.progress} style={{ width: `${progressToNextRank}%` }}></div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,0 +1,55 @@
+/* Basic styling for the navbar */
+.navbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #282c34;
+    color: white;
+    padding: 10px;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+    transition: height 0.3s ease, padding 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  /* Collapsed state: reduced height and padding */
+  .collapsed {
+    height: 30px;
+    padding: 5px;
+    justify-content: center;
+  }
+  
+  /* Toggle button to show or hide the rank info */
+  .toggleButton {
+    cursor: pointer;
+    background-color: #444;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    margin-bottom: 5px;
+  }
+  
+  /* Rank info and progress bar */
+  .rankInfo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .progressBar {
+    background-color: #555;
+    width: 100%;
+    height: 10px;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-top: 5px;
+  }
+  
+  .progress {
+    background-color: #4caf50;
+    height: 100%;
+    transition: width 0.3s ease;
+  }
+  

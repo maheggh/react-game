@@ -9,13 +9,11 @@ const authMiddleware = (req, res, next) => {
   }
 
   const token = authHeader.split(' ')[1];
-  console.log('Received Token:', token); // Log the token received
+  console.log('Received Token:', token); 
 
   try {
     const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
-    console.log('Decoded Token:', decoded); // Log the decoded token to ensure it contains correct information
-
-    req.user = decoded; // Attach the decoded user info (usually contains userId)
+    req.user = decoded; 
     next();
   } catch (error) {
     console.error('Token verification error:', error.message);

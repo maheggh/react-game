@@ -16,10 +16,6 @@ exports.registerUser = async (req, res) => {
       password = generateRandomPassword(); // Generate random password
     }
 
-    // Log the generated username and password for debugging
-    console.log('Generated Username:', username);
-    console.log('Generated Password:', password); // Debugging
-
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new User({
       username,
@@ -39,8 +35,6 @@ exports.registerUser = async (req, res) => {
       expiresIn: '24h',
     });
 
-    // Log the response being sent back for debugging
-    console.log('Returning Response:', { username, password });
 
     res.status(201).json({
       success: true,
