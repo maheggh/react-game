@@ -50,7 +50,6 @@ exports.registerUser = async (req, res) => {
     res.status(500).json({ message: 'Failed to register user' });
   }
 };
-// Login User
 exports.loginUser = async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -125,39 +124,30 @@ exports.getUserData = async (req, res) => {
 
 exports.updateUserData = async (req, res) => {
   try {
-    const { money, stolenItems, xpToAdd } = req.body;
-    const user = await User.findById(req.user.userId);
+    const userId = req.user.userId;
+    const updatedData = req.body;
+
+    // Validate and sanitize updatedData as needed
+    const allowedUpdates = ['money', 'inJail', 'jailTimeEnd', 'xp', 'rank'];
+    const updates = {};
+
+    allowedUpdates.forEach((field) => {
+      if (field in updatedData) {
+        updates[field] = updatedData[field];
+      }
+    });
+
+    // Update the user data
+    const user = await User.findByIdAndUpdate(userId, updates, { new: true });
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // Update money and stolen items if provided
-    if (money !== undefined) user.money = money;
-    if (stolenItems !== undefined) user.stolenItems = stolenItems;
-
-    // Update XP and calculate new rank
-    if (xpToAdd) {
-      user.xp += xpToAdd;  // Add XP
-      user.rank = getRankForXp(user.xp);  // Recalculate the rank based on new XP
-    }
-
-    // Save the updated user data in the database
-    await user.save();
-
-    res.json({
-      success: true,
-      userData: {
-        username: user.username,
-        money: user.money,
-        stolenItems: user.stolenItems,
-        xp: user.xp,  
-        rank: user.rank,  
-      },
-    });
+    res.json({ success: true, message: 'User data updated', user });
   } catch (error) {
     console.error('Error updating user data:', error);
-    res.status(500).json({ message: 'Failed to update user data' });
+    res.status(500).json({ success: false, message: 'Failed to update user data', error: error.message });
   }
 };
 
@@ -181,9 +171,12 @@ exports.getJailTime = async (req, res) => {
       return res.status(200).json({ inJail: false, message: 'User is not in jail' });
     }
 
-    const jailTimeLeft = Math.max(0, user.jailTimeEnd - Date.now());
+    const jailTimeLeft = Math.max(0, user.jailTimeEnd.getTime() - Date.now());
     if (jailTimeLeft > 0) {
-      return res.status(200).json({ inJail: true, jailTime: Math.ceil(jailTimeLeft / 1000) });
+      return res.status(200).json({
+        inJail: true,
+        jailTime: Math.ceil(jailTimeLeft / 1000), // Return time in seconds
+      });
     } else {
       // Release user if jail time is up
       user.inJail = false;
@@ -193,6 +186,9 @@ exports.getJailTime = async (req, res) => {
     }
   } catch (error) {
     console.error('Error fetching jail time:', error.message);
-    return res.status(500).json({ message: 'Server error fetching jail time', error: error.message });
+    return res.status(500).json({
+      message: 'Server error fetching jail time',
+      error: error.message,
+    });
   }
 };

@@ -4,6 +4,8 @@ const mongoose = require("mongoose");
 const carSchema = new mongoose.Schema({
   name: String,
   price: Number,
+  baseChance: Number,
+  image: String,
 });
 
 const stolenItemSchema = new mongoose.Schema({
@@ -32,12 +34,12 @@ const userSchema = new mongoose.Schema({
   money: { type: Number, default: 0 },
   cars: [carSchema],
   crimesPerformed: { type: Number, default: 0 },
-  assassinationSuccessRate: { type: Number, default: 5 },
-  carTheftSuccessRate: { type: Number, default: 10 },
   inventory: [inventorySchema], 
   bossItems: [bossItemSchema],  
   missionsCompleted: { type: Number, default: 0 },
   stolenItems: [stolenItemSchema],  
+  inJail: { type: Boolean, default: false },     // Added field
+  jailTimeEnd: { type: Date, default: null },    // Added field
 });
 
 module.exports = mongoose.model("User", userSchema);

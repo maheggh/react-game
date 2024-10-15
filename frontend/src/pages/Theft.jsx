@@ -112,15 +112,41 @@ const Theft = () => {
     }
   };
 
-  const handleCheat = async () => {
-    const xpToAdd = 50;
-    const updatedMoney = money + 50000;
+// In CarTheft.jsx
 
-    setInJail(false);
-    setJailTime(0);
+const handleCheat = async () => {
+  const token = localStorage.getItem('token');
+  const updatedMoney = money + 50000;
 
-    await updateUserData({ xp: xp + xpToAdd, money: updatedMoney, inJail: false, jailTime: 0 });
-  };
+  try {
+    const response = await fetch('/api/users/update', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        money: updatedMoney,
+        inJail: false,
+        jailTimeEnd: null,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      setInJail(false);
+      setJailTime(0);
+      setSuccessMessage('Cheat activated: Money added and released from jail.');
+      updateUserData({ money: updatedMoney });
+    } else {
+      setFailureMessage(data.message || 'Failed to activate cheat.');
+    }
+  } catch (error) {
+    console.error('Error activating cheat:', error);
+    setFailureMessage('An error occurred while activating cheat.');
+  }
+};
 
   return (
     <div className="container mx-auto p-4">
@@ -153,6 +179,9 @@ const Theft = () => {
       {inJail && (
         <div className="mt-4">
           <p className="text-red-500">You are in jail! Jail time left: {jailTime} seconds.</p>
+          <div className="w-full h-auto my-2">
+          <img src="/assets/jailpic.jpg" alt="jailpic" />
+          </div>
         </div>
       )}
 
@@ -160,7 +189,7 @@ const Theft = () => {
       <div className="mt-4">
         <button
           className="bg-gray-600 text-white px-4 py-2 rounded-md"
-          onClick={() => setShowPocket(!showPocket)}  // Toggle pocket visibility
+          onClick={() => setShowPocket(!showPocket)}  
         >
           {showPocket ? 'Hide Pocket' : 'Show Pocket'}
         </button>

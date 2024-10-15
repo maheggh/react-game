@@ -1,7 +1,10 @@
+// middleware/authMiddleware.js
+
 const jwt = require('jsonwebtoken');
 
 const authMiddleware = (req, res, next) => {
   const authHeader = req.header('Authorization');
+  console.log('Authorization Header:', authHeader);
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     console.log('Missing or invalid Authorization header');
@@ -9,11 +12,12 @@ const authMiddleware = (req, res, next) => {
   }
 
   const token = authHeader.split(' ')[1];
-  console.log('Received Token:', token); 
+  console.log('Token:', token);
 
   try {
     const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
-    req.user = decoded; 
+    console.log('Decoded Token:', decoded);
+    req.user = { userId: decoded.userId }; // Ensure req.user.userId is set
     next();
   } catch (error) {
     console.error('Token verification error:', error.message);
