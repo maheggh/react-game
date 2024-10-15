@@ -12,6 +12,9 @@ const carRoutes = require('./routes/carRoutes');
 const carRacesRoutes = require('./routes/carRacesRoutes');
 const carTheftRoutes = require('./routes/carTheftRoutes');
 const theftRoutes = require('./routes/theftRoutes');
+const itemRoutes = require('./routes/itemRoutes');
+const weaponRoutes = require('./routes/weaponRoutes');
+const inventoryRoutes = require('./routes/inventoryRoutes');
 
 const app = express();
 
@@ -27,6 +30,9 @@ app.use('/api/cars', carRoutes);
 app.use('/api/carraces', carRacesRoutes);
 app.use('/api/cartheft', carTheftRoutes);
 app.use('/api/theft', theftRoutes);
+app.use('/api/items', itemRoutes);
+app.use('/api/weapons', weaponRoutes);
+app.use('/api/inventory', inventoryRoutes);
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, {

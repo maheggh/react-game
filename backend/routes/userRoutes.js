@@ -13,5 +13,6 @@ router.post('/login', userController.loginUser);
 router.get('/profile', authMiddleware, userController.getUserData); // Corrected line
 router.post('/update', authMiddleware, userController.updateUserData);
 router.get('/jail-time', authMiddleware, userController.getJailTime);
+router.post('/updateMoney', authMiddleware, userController.updateMoney);
 
 module.exports = router;

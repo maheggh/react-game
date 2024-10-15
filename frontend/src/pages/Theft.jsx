@@ -116,7 +116,7 @@ const Theft = () => {
 
 const handleCheat = async () => {
   const token = localStorage.getItem('token');
-  const updatedMoney = money + 50000;
+  const updatedMoney = money + 50000000;
 
   try {
     const response = await fetch('/api/users/update', {
@@ -225,7 +225,7 @@ const handleCheat = async () => {
         </button>
       </div>
 
-      <div className="mt-4">
+      <div className="mt-4 mb-40">
         <p className="text-xl">Money: ${money}</p>
       </div>
     </div>

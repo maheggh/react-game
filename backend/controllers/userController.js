@@ -192,3 +192,24 @@ exports.getJailTime = async (req, res) => {
     });
   }
 };
+
+exports.updateMoney = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { money } = req.body;
+
+    const user = await User.findById(userId);
+
+    if (money < 0) {
+      return res.status(400).json({ success: false, message: 'Money cannot be negative.' });
+    }
+
+    user.money = money;
+    await user.save();
+
+    res.status(200).json({ success: true, money: user.money });
+  } catch (error) {
+    console.error('Error updating money:', error);
+    res.status(500).json({ success: false, message: 'Server error updating money' });
+  }
+};

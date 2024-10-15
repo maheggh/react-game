@@ -1,9 +1,11 @@
-// routes/carRaceRoutes.js
+// routes/carRacesRoutes.js
+
 const express = require('express');
 const router = express.Router();
-const carRacesController = require('../controllers/carRacesController'); 
+const carRacesController = require('../controllers/carRacesController');
+const authMiddleware = require('../middleware/authMiddleware');
 
-// Define routes and map them to controller functions
-router.get('/racecars', carRacesController.getRaceCars); 
+router.post('/addCar', authMiddleware, carRacesController.addCarToGarage);
+router.post('/removeCar', authMiddleware, carRacesController.removeCarFromGarage);
 
 module.exports = router;
