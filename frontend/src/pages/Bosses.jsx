@@ -128,7 +128,7 @@ const BossesPage = () => {
       return;
     }
 
-    const bulletsCost = bulletsUsed * 100; // Adjust the cost per bullet if needed
+    const bulletsCost = bulletsUsed * 100; 
     if (money < bulletsCost) {
       setFailureMessage('You do not have enough money to execute the assassination.');
       return;

@@ -87,8 +87,6 @@ exports.loginUser = async (req, res) => {
     res.status(500).json({ message: 'Failed to login user' });
   }
 };
-
-// Get User Data (Protected Route)
 exports.getUserData = async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
@@ -120,8 +118,6 @@ exports.getUserData = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch user data' });
   }
 };
-
-
 exports.updateUserData = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -150,16 +146,12 @@ exports.updateUserData = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to update user data', error: error.message });
   }
 };
-
-// Get the remaining jail time
 exports.startJailTime = async (user, jailDurationInSeconds) => {
   user.inJail = true;
   const jailTimeEnd = Date.now() + jailDurationInSeconds * 1000; // Store the future release time in milliseconds
   user.jailTimeEnd = jailTimeEnd;
   await user.save();
 };
-
-// Get the remaining jail time for the user
 exports.getJailTime = async (req, res) => {
   try {
     const { userId } = req.user;
@@ -192,7 +184,6 @@ exports.getJailTime = async (req, res) => {
     });
   }
 };
-
 exports.updateMoney = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -211,5 +202,16 @@ exports.updateMoney = async (req, res) => {
   } catch (error) {
     console.error('Error updating money:', error);
     res.status(500).json({ success: false, message: 'Server error updating money' });
+  }
+};
+exports.getTargets = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const users = await User.find({ _id: { $ne: userId }, isAlive: true }).select('username level xp _id');
+
+    res.status(200).json({ success: true, targets: users });
+  } catch (error) {
+    console.error('Error fetching targets:', error);
+    res.status(500).json({ success: false, message: 'Error fetching targets' });
   }
 };

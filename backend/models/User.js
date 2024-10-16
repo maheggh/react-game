@@ -18,6 +18,8 @@ const userSchema = new mongoose.Schema({
   xp: { type: Number, default: 0 },
   rank: { type: String, default: 'Homeless Potato' },
   money: { type: Number, default: 0 },
+  isAlive: { type: Boolean, default: true },
+  lastAssassinationAttempt: { type: Date, default: null },
   cars: [
     {
       name: String,

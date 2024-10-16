@@ -60,4 +60,4 @@ const getRankForXp = (xp) => {
   };
 };
 
-module.exports = { getRankForXp };
+module.exports = { getRankForXp, xpThresholds };

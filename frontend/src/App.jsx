@@ -1,3 +1,5 @@
+// App.js
+
 import React from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Home from "./pages/Home";
@@ -11,18 +13,24 @@ import Gambling from "./pages/Gambling";
 import WeaponStore from "./pages/WeaponStore";
 import Bosses from "./pages/Bosses";
 import ScoreScreen from "./pages/Score";
+import Assassination from "./pages/Assassination";
 import RankNavbar from "./components/RankNavBar";
+import DeadPage from "./components/DeadPage"; // Corrected Import
 
 const App = () => {
   return (
     <Router>
       <NavBar />
+      <RankNavbar /> {/* Ensure consistent layout */}
       <Routes>
         {/* Home page (registration/login) */}
         <Route path="/" element={<Home />} />
 
         {/* Login Route */}
         <Route path="/login" element={<Login />} />
+
+        {/* Dead Page */}
+        <Route path="/dead" element={<DeadPage />} /> {/* Updated Route Path */}
 
         {/* Protected Routes */}
         <Route
@@ -41,15 +49,15 @@ const App = () => {
             </ProtectedRoute>
           }
         />
-                <Route
+        <Route
           path="/theft"
           element={
             <ProtectedRoute>
               <Theft />
             </ProtectedRoute>
           }
-          />
-          <Route
+        />
+        <Route
           path="/gambling"
           element={
             <ProtectedRoute>
@@ -57,7 +65,7 @@ const App = () => {
             </ProtectedRoute>
           }
         />
-                  <Route
+        <Route
           path="/weaponstore"
           element={
             <ProtectedRoute>
@@ -65,24 +73,31 @@ const App = () => {
             </ProtectedRoute>
           }
         />
-                          <Route
-          path="/Bosses"
+        <Route
+          path="/bosses" /* Changed to lowercase */
           element={
             <ProtectedRoute>
               <Bosses />
             </ProtectedRoute>
           }
         />
-                                  <Route
-          path="/Score"
+        <Route
+          path="/score" /* Changed to lowercase */
           element={
             <ProtectedRoute>
               <ScoreScreen />
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/assassination" /* Changed to lowercase */
+          element={
+            <ProtectedRoute>
+              <Assassination />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
-      <RankNavbar />
     </Router>
   );
 };
