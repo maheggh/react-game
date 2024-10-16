@@ -60,6 +60,7 @@ exports.attemptAssassination = async (req, res) => {
         res.status(200).json({
           success: true,
           message: `Your assassination attempt failed, and you were killed by ${target.username}!`,
+          userDied: true, // Flag indicating the attacker is dead
         });
       } else {
         res.status(200).json({

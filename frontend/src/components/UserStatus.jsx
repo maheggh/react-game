@@ -1,58 +1,48 @@
+// pages/UserStatus.jsx
+
 import React, { useContext, useEffect, useState } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const UserStatus = () => {
-  const { user, isLoggedIn, logout } = useContext(AuthContext);
-  const [userData, setUserData] = useState(null);
+  const { user, isLoggedIn, logout, loading } = useContext(AuthContext);
   const [password, setPassword] = useState(''); // Store the password
   const [showPassword, setShowPassword] = useState(false); // Toggle visibility
-  const [showInventory, setShowInventory] = useState(false); // Toggle inventory visibility
-  const [showBossItems, setShowBossItems] = useState(false); // Toggle boss items visibility
-  const [showCars, setShowCars] = useState(false); // Toggle cars visibility
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (isLoggedIn) {
-      const fetchUserData = async () => {
-        const response = await fetch('/api/users/profile', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
-  
-        const data = await response.json();
-        setUserData(data.userData);
-  
-        // Retrieve password from localStorage (for registration purposes)
-        const storedPassword = localStorage.getItem('password');
-        console.log('Stored password in localStorage:', storedPassword);  // Log to check
-        if (storedPassword) {
-          setPassword(storedPassword); // Set the password
-        } else {
-          console.log('No password found in localStorage'); // Debugging message
-        }
-      };
-  
-      fetchUserData();
+    if (isLoggedIn && user) {
+      // Retrieve password from localStorage (for registration purposes)
+      const storedPassword = localStorage.getItem('password');
+      console.log('Stored password in localStorage:', storedPassword);  // Log to check
+      if (storedPassword) {
+        setPassword(storedPassword); // Set the password
+      } else {
+        console.log('No password found in localStorage'); // Debugging message
+      }
     }
-  }, [isLoggedIn]);
-  
+  }, [isLoggedIn, user]);
+
+  // Handle redirection to DeadPage if user is dead
+  useEffect(() => {
+    if (user && !user.isAlive) {
+      navigate('/dead');
+    }
+  }, [user, navigate]);
 
   const handleLogout = () => {
     logout();
-    localStorage.removeItem('password'); // Clear password on logout
     navigate('/');
   };
 
+  if (loading) return <p>Loading...</p>;
   if (!isLoggedIn) return <p>Not logged in</p>;
-  if (!userData) return <p>Loading user data...</p>;
+  if (!user) return <p>Loading user data...</p>;
 
   return (
     <div className="container mx-auto p-4">
-      <h2 className="text-2xl font-bold">Welcome, {userData.username}</h2>
-      <p className="text-lg">Money: ${userData.money}</p>
-
+      <h2 className="text-2xl font-bold">Welcome, {user.username}</h2>
+      <p className="text-lg">Money: ${user.money}</p>
 
       {/* Password display */}
       {password && (
@@ -70,6 +60,8 @@ const UserStatus = () => {
         </div>
       )}
 
+      {/* Additional user data display can be added here */}
+      {/* For example, Inventory, Cars, etc. */}
 
       <button
         onClick={handleLogout}

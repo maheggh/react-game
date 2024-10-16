@@ -1,3 +1,5 @@
+// components/Register.jsx
+
 import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -26,14 +28,18 @@ const Register = () => {
 
       const data = await response.json();
 
-      if (response.ok) {
+      console.log('Registration response:', data); // Debugging
+
+      if (data.success) {
         setUsername(data.userData.username);  // Set the generated username
         setPassword(data.userData.password);  // Set the generated password
 
         // Store password locally (useful for the user to see their password)
-        localStorage.setItem('password', data.userData.password);
+        if (data.userData.password) {
+          localStorage.setItem('password', data.userData.password);
+        }
 
-        setMessage('User registered successfully!');
+        setMessage(data.message || 'User registered successfully!');
 
         if (data.token) {
           login(data.token);  // Automatically log the user in after registration

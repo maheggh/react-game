@@ -1,15 +1,18 @@
+// pages/AssassinationPage.jsx
+
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 
 const AssassinationPage = () => {
-  const { user } = useContext(AuthContext); // Assuming user context is already set up
-  const [targets, setTargets] = useState([]); // Holds list of targets
-  const [selectedTarget, setSelectedTarget] = useState(null); // Holds selected target
-  const [weapons, setWeapons] = useState([]); // Holds list of weapons
-  const [selectedWeapon, setSelectedWeapon] = useState(null); // Holds selected weapon
-  const [resultMessage, setResultMessage] = useState(''); // Shows result of action
-  const [errorMessage, setErrorMessage] = useState(''); // Shows error messages
-  const [isLoading, setIsLoading] = useState(false); // To show loading state
+  const { user, isAlive, setIsAlive } = useContext(AuthContext);
+  const [targets, setTargets] = useState([]);
+  const [selectedTarget, setSelectedTarget] = useState(null);
+  const [weapons, setWeapons] = useState([]);
+  const [selectedWeapon, setSelectedWeapon] = useState(null);
+  const [resultMessage, setResultMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [userStats, setUserStats] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
 
   // Fetch user stats and weapons on mount
   useEffect(() => {
@@ -22,7 +25,17 @@ const AssassinationPage = () => {
         });
         const data = await response.json();
         if (data.success) {
-          setWeapons(data.userData.inventory.filter(item => item.attributes && item.attributes.accuracy));
+          setUserStats({
+            level: data.userData.level,
+            rank: data.userData.rank,
+          });
+          setWeapons(
+            data.userData.inventory.filter(
+              (item) => item.attributes && item.attributes.accuracy
+            )
+          );
+          // Update isAlive in AuthContext
+          setIsAlive(data.userData.isAlive);
         } else {
           setErrorMessage(data.message || 'Failed to fetch user data.');
         }
@@ -32,9 +45,9 @@ const AssassinationPage = () => {
       }
     };
     fetchUserData();
-  }, []);
+  }, [setIsAlive]);
 
-  // Fetch assassination targets
+  // Fetch targets
   useEffect(() => {
     const fetchTargets = async () => {
       try {
@@ -58,7 +71,7 @@ const AssassinationPage = () => {
     fetchTargets();
   }, []);
 
-  // Handle assassination attempt
+  // Function to attempt assassination
   const attemptAssassination = async () => {
     setResultMessage('');
     setErrorMessage('');
@@ -93,8 +106,14 @@ const AssassinationPage = () => {
 
       if (response.ok && data.success) {
         setResultMessage(data.message);
+        if (data.userDied) { // If attacker died
+          setIsAlive(false); // Update context
+        }
       } else {
         setErrorMessage(data.message || 'Assassination attempt failed.');
+        if (data.userDied) { // If attacker died
+          setIsAlive(false); // Update context
+        }
       }
     } catch (error) {
       console.error('Error during assassination attempt:', error);
@@ -176,7 +195,7 @@ const AssassinationPage = () => {
       <button
         onClick={attemptAssassination}
         disabled={isLoading}
-        className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+        className={`bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         {isLoading ? 'Attempting...' : 'Attempt Assassination'}
       </button>

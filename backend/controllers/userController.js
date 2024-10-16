@@ -10,38 +10,36 @@ exports.registerUser = async (req, res) => {
 
     // If username or password is missing, generate random ones
     if (!username) {
-      username = generateRandomGangsterName(); // Generate random gangster name
+      username = generateRandomGangsterName();
     }
     if (!password) {
-      password = generateRandomPassword(); // Generate random password
+      password = generateRandomPassword();
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new User({
       username,
       password: hashedPassword,
+      isAlive: true, // Ensure the user starts alive
+      xp: 0,
+      rank: 'Homeless Potato',
       money: 0,
       cars: [],
       stolenItems: [],
       inventory: [],
       bossItems: [],
-      rank: 'Beginner',
-      xp: 0
     });
 
     await newUser.save();
 
-    const token = jwt.sign({ userId: newUser._id }, process.env.TOKEN_SECRET, {
-      expiresIn: '24h',
-    });
-
+    const token = jwt.sign({ userId: newUser._id }, process.env.TOKEN_SECRET, { expiresIn: '24h' });
 
     res.status(201).json({
       success: true,
       token,
       userData: {
         username: newUser.username,
-        password,  // Include password in response for display
+        password, // Include password in response for display
         message: 'User registered successfully',
       },
     });
@@ -50,18 +48,20 @@ exports.registerUser = async (req, res) => {
     res.status(500).json({ message: 'Failed to register user' });
   }
 };
+
+// Login User Function
 exports.loginUser = async (req, res) => {
   try {
     const { username, password } = req.body;
 
     const user = await User.findOne({ username });
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ success: false, message: 'Invalid credentials' });
     }
 
     const token = jwt.sign({ userId: user._id }, process.env.TOKEN_SECRET, {
@@ -72,52 +72,61 @@ exports.loginUser = async (req, res) => {
       success: true,
       token,
       userData: {
+        _id: user._id,
         username: user.username,
         money: user.money,
         cars: user.cars,
         stolenItems: user.stolenItems,
         inventory: user.inventory,
         bossItems: user.bossItems,
-        xp: user.xp, 
+        xp: user.xp,
         rank: user.rank,
+        isAlive: user.isAlive,
       },
     });
   } catch (error) {
     console.error('Error logging in user:', error);
-    res.status(500).json({ message: 'Failed to login user' });
+    res.status(500).json({ success: false, message: 'Failed to login user' });
   }
 };
+
+
+// Get User Data Function
 exports.getUserData = async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId);
+    const user = await User.findById(req.user.userId).select('-password'); // Exclude password
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
     // Calculate the rank and next rank details
-    const rankInfo = getRankForXp(user.xp);
+    const rankInfo = getRankForXp(user.xp); // Ensure this function is correctly implemented
 
     res.json({
       success: true,
       userData: {
+        _id: user._id,
         username: user.username,
         money: user.money,
         cars: user.cars,
         stolenItems: user.stolenItems,
         inventory: user.inventory,
         bossItems: user.bossItems,
-        xp: user.xp,  // Current XP
+        xp: user.xp, // Current XP
         rank: rankInfo.currentRank, // Current rank
-        nextRank: rankInfo.nextRank,  // Next rank
+        nextRank: rankInfo.nextRank, // Next rank
         nextRankThreshold: rankInfo.nextRankThreshold, // XP needed for next rank
-        currentRankThreshold: rankInfo.currentRankThreshold,  // XP threshold for current rank
+        currentRankThreshold: rankInfo.currentRankThreshold, // XP threshold for current rank
+        isAlive: user.isAlive, // Include isAlive
       },
     });
   } catch (error) {
     console.error('Error fetching user data:', error);
-    res.status(500).json({ message: 'Failed to fetch user data' });
+    res.status(500).json({ success: false, message: 'Failed to fetch user data' });
   }
 };
+
+// Update User Data Function
 exports.updateUserData = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -135,7 +144,6 @@ exports.updateUserData = async (req, res) => {
 
     // Update the user data
     const user = await User.findByIdAndUpdate(userId, updates, { new: true });
-
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
@@ -144,6 +152,39 @@ exports.updateUserData = async (req, res) => {
   } catch (error) {
     console.error('Error updating user data:', error);
     res.status(500).json({ success: false, message: 'Failed to update user data', error: error.message });
+  }
+};
+exports.getUserProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).select('-password'); // Exclude password
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    // Calculate the rank and next rank details
+    const rankInfo = getRankForXp(user.xp);
+
+    res.json({
+      success: true,
+      userData: {
+        _id: user._id,
+        username: user.username,
+        money: user.money,
+        cars: user.cars,
+        stolenItems: user.stolenItems,
+        inventory: user.inventory,
+        bossItems: user.bossItems,
+        xp: user.xp, // Current XP
+        rank: rankInfo.currentRank, // Current rank
+        nextRank: rankInfo.nextRank, // Next rank
+        nextRankThreshold: rankInfo.nextRankThreshold, // XP needed for next rank
+        currentRankThreshold: rankInfo.currentRankThreshold, // XP threshold for current rank
+        isAlive: user.isAlive, // Include isAlive
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch user data' });
   }
 };
 exports.startJailTime = async (user, jailDurationInSeconds) => {

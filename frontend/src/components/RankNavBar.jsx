@@ -3,7 +3,7 @@ import { AuthContext } from '../../context/AuthContext';
 import styles from './RankNavBar.module.css';
 
 const RankNavbar = () => {
-  const { user, xp, rank, updateUserData } = useContext(AuthContext);
+  const { user, xp, rank } = useContext(AuthContext);  // Use `user`, `xp`, and `rank` from context
   const [nextRankThreshold, setNextRankThreshold] = useState(1000);
   const [xpForNextLevel, setXpForNextLevel] = useState(0);
   const [collapsed, setCollapsed] = useState(true); // State to toggle collapsed/expanded
@@ -21,15 +21,11 @@ const RankNavbar = () => {
           },
         });
         const data = await response.json();
-        if (data.success) {
-          updateUserData({
-            xp: data.userData.xp,
-            rank: data.userData.rank,
-            nextRankThreshold: data.userData.nextRankThreshold,
-            xpForNextLevel: data.userData.xpForNextLevel,
-          });
+        if (response.ok && data.success) {
           setNextRankThreshold(data.userData.nextRankThreshold);
           setXpForNextLevel(data.userData.xpForNextLevel);
+        } else {
+          console.error('Failed to fetch user data:', data.message);
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -37,7 +33,7 @@ const RankNavbar = () => {
     };
 
     fetchUserData();
-  }, [xp, updateUserData]);
+  }, [xp]);  // Only re-fetch when `xp` changes
 
   const toggleCollapse = () => {
     setCollapsed(!collapsed);
