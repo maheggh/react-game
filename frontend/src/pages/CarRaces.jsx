@@ -182,7 +182,7 @@ const CarRaces = () => {
   };
 
   return (
-    <div className="container mx-auto justify-center grid p-4 my-40">
+    <div className="container mx-auto justify-center grid p-4 my-20">
       <h2 className="text-2xl font-bold mb-4">Car Races</h2>
       <img src="/assets/race7.png" className="p-4" alt="Potatoes racing cars" />
       <p>

@@ -112,12 +112,12 @@ exports.getUserData = async (req, res) => {
         stolenItems: user.stolenItems,
         inventory: user.inventory,
         bossItems: user.bossItems,
-        xp: user.xp, // Current XP
-        rank: rankInfo.currentRank, // Current rank
-        nextRank: rankInfo.nextRank, // Next rank
-        nextRankThreshold: rankInfo.nextRankThreshold, // XP needed for next rank
-        currentRankThreshold: rankInfo.currentRankThreshold, // XP threshold for current rank
-        isAlive: user.isAlive, // Include isAlive
+        xp: user.xp, 
+        rank: rankInfo.currentRank, 
+        nextRank: rankInfo.nextRank, 
+        nextRankThreshold: rankInfo.nextRankThreshold, 
+        currentRankThreshold: rankInfo.currentRankThreshold, 
+        isAlive: user.isAlive, 
       },
     });
   } catch (error) {

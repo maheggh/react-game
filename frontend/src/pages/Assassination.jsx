@@ -1,10 +1,8 @@
-// pages/AssassinationPage.jsx
-
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 
 const AssassinationPage = () => {
-  const { user, isAlive, setIsAlive } = useContext(AuthContext);
+  const { user, money, updateUserData, isAlive, setIsAlive } = useContext(AuthContext);
   const [targets, setTargets] = useState([]);
   const [selectedTarget, setSelectedTarget] = useState(null);
   const [weapons, setWeapons] = useState([]);
@@ -13,6 +11,10 @@ const AssassinationPage = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [userStats, setUserStats] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [scenarioImage, setScenarioImage] = useState('');
+  const [cooldown, setCooldown] = useState(null); // Cooldown state
+
+  const COOLDOWN_TIME = 30 * 60 * 1000; // 30 minutes
 
   // Fetch user stats and weapons on mount
   useEffect(() => {
@@ -28,13 +30,13 @@ const AssassinationPage = () => {
           setUserStats({
             level: data.userData.level,
             rank: data.userData.rank,
+            accuracy: data.userData.accuracy, 
           });
           setWeapons(
             data.userData.inventory.filter(
               (item) => item.attributes && item.attributes.accuracy
             )
           );
-          // Update isAlive in AuthContext
           setIsAlive(data.userData.isAlive);
         } else {
           setErrorMessage(data.message || 'Failed to fetch user data.');
@@ -71,11 +73,38 @@ const AssassinationPage = () => {
     fetchTargets();
   }, []);
 
+  // Check cooldown status
+  useEffect(() => {
+    const lastAttempt = localStorage.getItem('lastAssassinationAttempt');
+    if (lastAttempt) {
+      const remainingTime = COOLDOWN_TIME - (Date.now() - new Date(lastAttempt));
+      if (remainingTime > 0) {
+        setCooldown(remainingTime);
+        const interval = setInterval(() => {
+          setCooldown((prev) => (prev > 1000 ? prev - 1000 : 0));
+        }, 1000);
+        return () => clearInterval(interval);
+      }
+    }
+  }, []);
+
+  // Function to calculate random outcome
+  const calculateOutcome = (accuracy) => {
+    const randomFactor = Math.random();
+    return randomFactor < accuracy / 100; // success if randomFactor is within accuracy range
+  };
+
   // Function to attempt assassination
   const attemptAssassination = async () => {
     setResultMessage('');
     setErrorMessage('');
     setIsLoading(true);
+
+    if (cooldown > 0) {
+      setErrorMessage(`Please wait ${Math.ceil(cooldown / 60000)} minutes before your next attempt.`);
+      setIsLoading(false);
+      return;
+    }
 
     if (!selectedTarget) {
       setErrorMessage('You must select a target.');
@@ -88,6 +117,14 @@ const AssassinationPage = () => {
       setIsLoading(false);
       return;
     }
+
+    if (money < 50000) {
+      setErrorMessage('Not enough money. Assassination costs $50,000.');
+      setIsLoading(false);
+      return;
+    }
+
+    const success = calculateOutcome(selectedWeapon.attributes.accuracy);
 
     try {
       const response = await fetch('/api/assassinate', {
@@ -105,100 +142,126 @@ const AssassinationPage = () => {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setResultMessage(data.message);
-        if (data.userDied) { // If attacker died
-          setIsAlive(false); // Update context
+        const newMoney = money - 50000;
+        updateUserData({ money: newMoney });
+        setResultMessage(success ? 'Assassination succeeded! congratulations you are a murderer now, how does it feel?' : 'Assassination failed, turns out you cant do anything right.');
+        setScenarioImage(success ? '/assets/success.png' : '/assets/failure.png');
+        localStorage.setItem('lastAssassinationAttempt', new Date());
+        setCooldown(COOLDOWN_TIME);
+        if (data.userDied) {
+          setIsAlive(false);
         }
       } else {
         setErrorMessage(data.message || 'Assassination attempt failed.');
-        if (data.userDied) { // If attacker died
-          setIsAlive(false); // Update context
+        setScenarioImage('/assets/failure.png');
+        if (data.userDied) {
+          setIsAlive(false); 
         }
       }
     } catch (error) {
       console.error('Error during assassination attempt:', error);
       setErrorMessage('Server error occurred during assassination.');
+      setScenarioImage('/assets/error.png');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6 text-center">Assassination Page</h1>
+    <div className="container mx-auto p-4 text-white min-h-screen bg-gray-900 pt-20 pb-40 mt-8">
+      <h1 className="text-4xl font-bold mb-8 text-center text-red-700">Assassination Mission</h1>
 
       {/* Error Message */}
-      {errorMessage && <p className="text-red-500">{errorMessage}</p>}
+      {errorMessage && <p className="text-red-500 text-center mb-4">{errorMessage}</p>}
+      <h1 className='text-left p-4 text-lg'>Welcome to the potato underworld, where you can 'tactfully eliminate' other unsuspecting spuds. 
+        But beware! Not every potato goes down without a fight—some have eyes on the back of their heads and might fry you instead. 
+        Proceed with caution, or you might just be the one mashed!</h1>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        {/* Target Selection */}
+        <div className="p-4 bg-gray-800 rounded-lg shadow-lg">
+          <h2 className="text-xl font-semibold mb-2 text-gray-200">Select Target</h2>
+          <select
+            id="target-select"
+            value={selectedTarget ? selectedTarget._id : ''}
+            onChange={(e) => {
+              const target = targets.find((t) => t._id === e.target.value);
+              setSelectedTarget(target);
+            }}
+            className="border border-gray-600 rounded px-3 py-2 w-full bg-gray-700 text-white"
+          >
+            <option value="" disabled>
+              Choose a target
+            </option>
+            {targets.length > 0 ? (
+              targets.map((target) => (
+                <option key={target._id} value={target._id}>
+                  {target.username} (Level {target.level})
+                </option>
+              ))
+            ) : (
+              <option value="" disabled>No targets available</option>
+            )}
+          </select>
+        </div>
+
+        {/* Weapon Selection */}
+        <div className="p-4 bg-gray-800 rounded-lg shadow-lg">
+          <h2 className="text-xl font-semibold mb-2 text-gray-200">Select Weapon</h2>
+          <select
+            id="weapon-select"
+            value={selectedWeapon ? selectedWeapon.name : ''}
+            onChange={(e) => {
+              const weapon = weapons.find((w) => w.name === e.target.value);
+              setSelectedWeapon(weapon);
+            }}
+            className="border border-gray-600 rounded px-3 py-2 w-full bg-gray-700 text-white"
+          >
+            <option value="" disabled>
+              Choose a weapon
+            </option>
+            {weapons.length > 0 ? (
+              weapons.map((weapon) => (
+                <option key={weapon.name} value={weapon.name}>
+                  {weapon.name} - Accuracy: {weapon.attributes.accuracy}%
+                </option>
+              ))
+            ) : (
+              <option value="" disabled>No weapons available</option>
+            )}
+          </select>
+        </div>
+      </div>
 
       {/* Result Message */}
-      {resultMessage && <p className="text-green-500">{resultMessage}</p>}
+      {resultMessage && <p className="text-green-400 text-center text-lg mb-4 p-3 bg-gray-700 rounded-md">{resultMessage}</p>}
 
-      {/* Target Selection */}
-      <div className="mb-4">
-        <label htmlFor="target-select" className="block font-bold mb-2">
-          Select Target:
-        </label>
-        <select
-          id="target-select"
-          value={selectedTarget ? selectedTarget._id : ''}
-          onChange={(e) => {
-            const target = targets.find((t) => t._id === e.target.value);
-            setSelectedTarget(target);
-          }}
-          className="border rounded px-3 py-2 w-full"
-        >
-          <option value="" disabled>
-            Choose a target
-          </option>
-          {targets.length > 0 ? (
-            targets.map((target) => (
-              <option key={target._id} value={target._id}>
-                {target.username} (Level {target.level})
-              </option>
-            ))
-          ) : (
-            <option value="" disabled>No targets available</option>
-          )}
-        </select>
-      </div>
+      {/* Display Scenario Image */}
+      {scenarioImage && (
+        <div className="flex justify-center mb-6">
+          <img src={scenarioImage} alt="Assassination Scenario" className="w-1/2 h-auto rounded-md shadow-md" />
+        </div>
+      )}
 
-      {/* Weapon Selection */}
-      <div className="mb-4">
-        <label htmlFor="weapon-select" className="block font-bold mb-2">
-          Select Weapon:
-        </label>
-        <select
-          id="weapon-select"
-          value={selectedWeapon ? selectedWeapon.name : ''}
-          onChange={(e) => {
-            const weapon = weapons.find((w) => w.name === e.target.value);
-            setSelectedWeapon(weapon);
-          }}
-          className="border rounded px-3 py-2 w-full"
-        >
-          <option value="" disabled>
-            Choose a weapon
-          </option>
-          {weapons.length > 0 ? (
-            weapons.map((weapon) => (
-              <option key={weapon.name} value={weapon.name}>
-                {weapon.name} - Accuracy: {weapon.attributes.accuracy}%
-              </option>
-            ))
-          ) : (
-            <option value="" disabled>No weapons available</option>
-          )}
-        </select>
-      </div>
+      {/* Cooldown Timer */}
+      {cooldown > 0 && (
+        <p className="text-center text-red-500 mb-4">Next attempt available in: {Math.floor(cooldown / 60000)} minutes</p>
+      )}
 
       {/* Assassination Button */}
-      <button
-        onClick={attemptAssassination}
-        disabled={isLoading}
-        className={`bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-      >
-        {isLoading ? 'Attempting...' : 'Attempt Assassination'}
-      </button>
+      <div className="flex justify-center">
+        <button
+          onClick={attemptAssassination}
+          disabled={isLoading || cooldown > 0}
+          className={`bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full transition duration-300 ease-in-out ${isLoading || cooldown > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          {isLoading ? (
+            <div className="spinner-border animate-spin inline-block w-4 h-4 border-2 rounded-full"></div>
+          ) : (
+            'Attempt Assassination'
+          )}
+        </button>
+      </div>
     </div>
   );
 };

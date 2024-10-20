@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
-import styles from './Gambling.module.css'; 
+import React, { useState, useEffect, useRef, useContext } from 'react';
+import { AuthContext } from '../../context/AuthContext'; // Import AuthContext
+import styles from './Gambling.module.css'; // Import the CSS module
 
 const GamblingPage = () => {
+  const { money, updateUserData } = useContext(AuthContext); // Access money from AuthContext
   const canvasRef = useRef(null); // Reference for the wheel canvas
   const resultTextRef = useRef(null); // Reference for result text
-  const [money, setMoney] = useState(parseInt(localStorage.getItem('money')) || 0);
+  const [currentMoney, setCurrentMoney] = useState(money); // Local money state to reflect changes instantly
   const [angVel, setAngVel] = useState(0);
   const [ang, setAng] = useState(0); // Angle in radians
   const [resultHandled, setResultHandled] = useState(false);
-  const [spinning, setSpinning] = useState(false); // Keep track of whether the wheel is spinning
+  const [spinning, setSpinning] = useState(false); // Track spinning status
 
   const sectors = [
     { color: '#C71585', label: '300' },
@@ -24,14 +26,14 @@ const GamblingPage = () => {
   const TAU = 2 * Math.PI;
   const arc = TAU / sectors.length;
 
+  // Function to spin the wheel
   const spinWheel = () => {
     if (!spinning && angVel === 0) { // Only allow spinning if it's not already spinning
-      if (money >= 250) {
-        setMoney(prevMoney => {
-          const newMoney = prevMoney - 250;
-          localStorage.setItem('money', newMoney);
-          return newMoney;
-        });
+      if (currentMoney >= 250) {
+        const updatedMoney = currentMoney - 250;
+        setCurrentMoney(updatedMoney); // Update local money state
+        updateUserData({ money: updatedMoney }); // Sync with backend
+
         setAngVel(Math.random() * 0.3 + 0.3); // Set a random initial angular velocity
         setResultHandled(false); // Reset result handled
         setSpinning(true); // Mark that the wheel is spinning
@@ -70,10 +72,10 @@ const GamblingPage = () => {
       const sector = sectors[getIndex()];
       canvas.style.transform = `rotate(${ang - Math.PI / 2}rad)`;
       if (angVel < 0.002 && !resultHandled) {
-        handleResult(sector); 
-        setResultHandled(true); 
-        setSpinning(false); 
-        setAngVel(0); 
+        handleResult(sector); // Handle the result
+        setResultHandled(true);
+        setSpinning(false);
+        setAngVel(0); // Stop the wheel
       }
     };
 
@@ -83,28 +85,27 @@ const GamblingPage = () => {
 
     const updateWheel = () => {
       if (angVel) {
-        setAngVel(prev => prev * friction); 
-        setAng(prev => (prev + angVel) % TAU); 
+        setAngVel(prev => prev * friction); // Reduce angular velocity
+        setAng(prev => (prev + angVel) % TAU); // Update the angle
       }
       rotateWheel();
     };
 
-    sectors.forEach(drawSector); 
-    rotateWheel();
+    sectors.forEach(drawSector);
+    rotateWheel(); 
 
-    const interval = setInterval(updateWheel, 1000 / 60);
+    const interval = setInterval(updateWheel, 1000 / 60); 
     return () => clearInterval(interval); 
-  }, [angVel, ang, resultHandled]); 
+  }, [angVel, ang, resultHandled]);
 
   const handleResult = (sector) => {
     let winningAmount = parseInt(sector.label);
     if (!isNaN(winningAmount)) {
-      setMoney(prevMoney => {
-        const newMoney = prevMoney + winningAmount;
-        localStorage.setItem('money', newMoney);
-        return newMoney;
-      });
-      resultTextRef.current.textContent = `Congratulations! You won $${winningAmount}!`;
+      const updatedMoney = currentMoney + winningAmount;
+      setCurrentMoney(updatedMoney); 
+      updateUserData({ money: updatedMoney }); 
+
+      resultTextRef.current.textContent = `🎉 Congratulations! You won $${winningAmount} you degenerate gambler!`;
     } else {
       resultTextRef.current.textContent = 'Spin to win!';
     }
@@ -112,18 +113,17 @@ const GamblingPage = () => {
 
   return (
     <div className={styles.gamblingContainer}>
-      <h2 className='text-3xl m-4 bg-blue-200 .rounded-2xl w-60 h-10'>Wheel of Fortune</h2>
-      <p>Your Balance: ${money}</p>
-      <p>Ticket cost: $250</p>
-      <div className={styles.pointer}></div>
+      <h2 className={styles.casinoTitle}>🎰 Wheel of Fortune 🎰</h2>
+      <p className={styles.balance}>Your Balance: <span className={styles.money}>${currentMoney}</span></p>
+      <p className={styles.ticketCost}>Ticket cost: <span className={styles.cost}>$250</span></p>
+      <div className={styles.wheelPointer}></div>
       <div className={styles.wheelContainer}>
-        <canvas ref={canvasRef} width="400" height="400"></canvas> 
-        <button id="spin" className={styles.spinButton} onClick={spinWheel} disabled={spinning}>
-          Spin the Wheel
-        </button>
+        <canvas ref={canvasRef} width="400" height="400"></canvas>
       </div>
-
-      <p id="resultText" className='p-4 text-xl bg-gray-200' ref={resultTextRef}></p>
+      <button className={styles.spinButton} onClick={spinWheel} disabled={spinning}>
+          Spin the Wheel! yolo
+        </button>
+      <p className={styles.resultText} ref={resultTextRef}></p>
     </div>
   );
 };

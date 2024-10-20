@@ -12,7 +12,7 @@ const BossesPage = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [failureMessage, setFailureMessage] = useState('');
 
-  // Define the bosses and their loot
+  // Define bosses and their loot
   const bosses = {
     'Potato President': {
       name: 'Presidential Medal',
@@ -141,16 +141,11 @@ const BossesPage = () => {
       targetChance
     );
 
-    // Deduct the cost of bullets from money
     const updatedMoney = money - bulletsCost;
-
-    // Update money in the backend
     await updateUserMoney(updatedMoney);
 
     if (Math.random() < successChance) {
       const loot = bosses[selectedTarget].loot;
-
-      // Add loot to inventory
       const updatedInventory = [...inventory];
       const existingLoot = updatedInventory.find((item) => item.name === loot.name);
 
@@ -160,17 +155,14 @@ const BossesPage = () => {
         updatedInventory.push({
           name: loot.name,
           quantity: 1,
-          price: 0, // Set appropriate price if needed
-          attributes: {}, // Add any attributes if necessary
+          price: 0,
+          attributes: {},
           image: loot.image,
         });
       }
 
       setInventory(updatedInventory);
-
-      // Update inventory in backend
       await updateUserInventory(updatedInventory);
-
       setSuccessMessage(`You defeated ${selectedTarget} and earned ${loot.name}!`);
     } else {
       setFailureMessage(`The fight with ${selectedTarget} failed or the target escaped.`);
@@ -187,18 +179,11 @@ const BossesPage = () => {
         },
         body: JSON.stringify({ money: updatedMoney }),
       });
-  
-      // Check if response is OK
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorText}`);
-      }
-  
+      if (!response.ok) throw new Error('Error updating money.');
       const data = await response.json();
       setMoney(data.money);
     } catch (error) {
       setFailureMessage('Server error occurred while updating money.');
-      console.error('Error:', error);
     }
   };
 
@@ -212,69 +197,63 @@ const BossesPage = () => {
         },
         body: JSON.stringify({ inventory: updatedInventory }),
       });
-      if (!response.ok) {
-        const data = await response.json();
-        setFailureMessage(data.message || 'Failed to update inventory.');
-      }
+      if (!response.ok) setFailureMessage('Failed to update inventory.');
     } catch (error) {
       setFailureMessage('Server error occurred while updating inventory.');
-      console.error('Error:', error);
     }
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6 text-center">Boss Fights</h1>
+    <div className="container mx-auto p-4 min-h-screen bg-gray-900 text-white pb-40">
+      <h1 className="text-4xl font-bold mb-6 text-center text-yellow-400">Boss Fights</h1>
 
-      {/* Display User's Money */}
       <div className="mb-6 text-xl">
         <p>
-          Money: <span className="font-bold text-green-600">${money}</span>
+          Money: <span className="font-bold text-green-400">${money}</span>
         </p>
       </div>
 
-      {/* Boss selection */}
-      <div className="mb-6">
-        <label htmlFor="targets" className="block text-xl font-bold mb-2">
-          Choose a Boss:
-        </label>
-        <select id="targets" className="w-full p-2 border rounded-md" onChange={handleSelectBoss}>
-          <option value="">Select a Boss</option>
-          {Object.keys(bosses).map((boss) => (
-            <option key={boss} value={boss}>
-              {boss}
-            </option>
-          ))}
-        </select>
-        {bossImage && (
-          <img src={bossImage} alt="Boss" className="w-64 h-64 my-4 mx-auto object-contain" />
-        )}
-      </div>
-
-      {/* Weapon selection */}
-      <div className="mb-6">
-        <label htmlFor="weapon-dropdown" className="block text-xl font-bold mb-2">
-          Select a Weapon:
-        </label>
-        <select
-          id="weapon-dropdown"
-          className="w-full p-2 border rounded-md"
-          onChange={handleSelectWeapon}
-        >
-          <option value="">Please select a weapon</option>
-          {inventory
-            .filter((item) => item.attributes && item.attributes.accuracy)
-            .map((weapon, index) => (
-              <option key={index} value={weapon.name}>
-                {weapon.name} - Accuracy: {weapon.attributes.accuracy}%
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="p-4 bg-gray-800 rounded-lg shadow-lg">
+          <h2 className="text-2xl font-semibold mb-4 text-gray-300">Choose a Boss</h2>
+          <select
+            id="targets"
+            className="w-full p-2 border border-gray-700 rounded-md bg-gray-700 text-white"
+            onChange={handleSelectBoss}
+          >
+            <option value="">Select a Boss</option>
+            {Object.keys(bosses).map((boss) => (
+              <option key={boss} value={boss}>
+                {boss}
               </option>
             ))}
-        </select>
+          </select>
+          {bossImage && (
+            <img src={bossImage} alt="Boss" className="w-48 h-48 mt-4 mx-auto object-contain" />
+          )}
+        </div>
+
+        <div className="p-4 bg-gray-800 rounded-lg shadow-lg">
+          <h2 className="text-2xl font-semibold mb-4 text-gray-300">Select a Weapon</h2>
+          <select
+            id="weapon-dropdown"
+            className="w-full p-2 border border-gray-700 rounded-md bg-gray-700 text-white"
+            onChange={handleSelectWeapon}
+          >
+            <option value="">Please select a weapon</option>
+            {inventory
+              .filter((item) => item.attributes && item.attributes.accuracy)
+              .map((weapon, index) => (
+                <option key={index} value={weapon.name}>
+                  {weapon.name} - Accuracy: {weapon.attributes.accuracy}%
+                </option>
+              ))}
+          </select>
+        </div>
       </div>
 
-      {/* Bullet input */}
-      <div className="mb-6">
-        <label htmlFor="bullets" className="block text-xl font-bold mb-2">
+      <div className="mt-6">
+        <label htmlFor="bullets" className="block text-xl font-semibold mb-2 text-gray-300">
           Bullets to use:
         </label>
         <input
@@ -285,41 +264,38 @@ const BossesPage = () => {
           max="10000"
           value={bulletsUsed}
           onChange={(e) => setBulletsUsed(Number(e.target.value))}
-          className="w-full p-2 border rounded-md"
+          className="w-full p-2 border border-gray-700 rounded-md bg-gray-700 text-white"
         />
       </div>
 
-      {/* Execute button */}
       <button
         onClick={attemptBossFight}
-        className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+        className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-full mt-6"
       >
         Execute
       </button>
 
-      {/* Success / Failure Messages */}
-      {successMessage && <div className="text-green-500 mt-4">{successMessage}</div>}
-      {failureMessage && <div className="text-red-500 mt-4">{failureMessage}</div>}
+      {successMessage && <div className="text-green-400 mt-4">{successMessage}</div>}
+      {failureMessage && <div className="text-red-400 mt-4">{failureMessage}</div>}
 
-      {/* Display Boss Items */}
       <div className="mt-8">
-        <h2 className="text-2xl font-bold mb-4">Boss Items</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-40">
+        <h2 className="text-3xl font-bold mb-4">Boss Items</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {inventory.filter((item) => bossItemNames.includes(item.name)).length > 0 ? (
             inventory
               .filter((item) => bossItemNames.includes(item.name))
               .map((item, index) => (
-                <div key={index} className="bg-gray-100 p-4 rounded-lg shadow-md text-center">
+                <div key={index} className="bg-gray-800 p-4 rounded-lg text-center">
                   <img
                     src={item.image}
                     alt={item.name}
                     className="w-24 h-24 object-contain mx-auto mb-2"
                   />
-                  <p className="font-semibold">{item.name}</p>
+                  <p className="font-semibold text-white">{item.name}</p>
                 </div>
               ))
           ) : (
-            <p>No boss items in your inventory.</p>
+            <p className="text-gray-400">No boss items in your inventory.</p>
           )}
         </div>
       </div>

@@ -4,34 +4,21 @@ import { AuthContext } from '../../context/AuthContext';
 const ScoreScreen = () => {
   const { user } = useContext(AuthContext); // Load user data from context
   const [money, setMoney] = useState(0);
-  const [rank, setRank] = useState(1);
+  const [rank, setRank] = useState('Homeless Potato');
   const [inventory, setInventory] = useState([]);
   const [missions, setMissions] = useState(0);
   const [bossItems, setBossItems] = useState([]);
 
-  // Fetch user data on mount
+  // Fetch user data once when component mounts
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const response = await fetch('/api/users/profile', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
-        const data = await response.json();
-        if (data.success) {
-          setMoney(data.userData.money);
-          setRank(data.userData.rank || 1);
-          setInventory(data.userData.inventory || []);
-          setBossItems(data.userData.bossItems || []); // Separate boss items
-          setMissions(data.userData.missionsCompleted || 0);
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      }
-    };
-    fetchUserData();
-  }, []);
+    if (user) {
+      setMoney(user.money || 0);
+      setRank(user.rank || 'Homeless Potato');
+      setInventory(user.inventory || []);
+      setBossItems(user.bossItems || []);
+      setMissions(user.missionsCompleted || 0);
+    }
+  }, [user]);
 
   return (
     <div className="container mx-auto p-8">
@@ -43,11 +30,11 @@ const ScoreScreen = () => {
           <h2 className="text-2xl font-semibold mb-4">Money & Rank</h2>
           <div className="flex items-center justify-between mb-4">
             <p className="text-lg">💰 Money:</p>
-            <p className="text-2xl font-bold">${money}</p>
+            <p className="text-2xl font-bold">${money.toLocaleString()}</p>
           </div>
           <div className="flex items-center justify-between">
             <p className="text-lg">🔰 Rank:</p>
-            <p className="text-2xl font-bold">Rank {rank}</p>
+            <p className="text-2xl font-bold">{rank}</p>
           </div>
         </div>
 
@@ -57,7 +44,7 @@ const ScoreScreen = () => {
           <ul className="space-y-2">
             {inventory.length > 0 ? (
               inventory
-                .filter((item) => item.type === 'weapon') // Separate weapons
+                .filter((item) => item.type === 'weapon') // Filter out weapons
                 .map((item, index) => (
                   <li key={index} className="flex justify-between">
                     <span>{item.name}</span>
@@ -78,7 +65,6 @@ const ScoreScreen = () => {
               bossItems.map((item, index) => (
                 <li key={index} className="flex justify-between">
                   <span>{item.name}</span>
-                  {/* No accuracy for boss items */}
                 </li>
               ))
             ) : (
@@ -92,25 +78,6 @@ const ScoreScreen = () => {
           <h2 className="text-2xl font-semibold mb-4">Missions Completed</h2>
           <p className="text-2xl font-bold text-center">{missions}</p>
           <p className="text-center">Assassinations, heists, and more!</p>
-        </div>
-      </div>
-
-      {/* Achievements Section */}
-      <div className="mt-8 bg-gradient-to-br from-yellow-500 to-orange-500 text-white rounded-lg p-6 shadow-lg">
-        <h2 className="text-2xl font-semibold mb-4">Achievements</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-yellow-600 rounded-lg p-4 text-center shadow-md">
-            <p>🎖 10 Successful Heists</p>
-          </div>
-          <div className="bg-yellow-600 rounded-lg p-4 text-center shadow-md">
-            <p>🎖 1 Million in Cash</p>
-          </div>
-          <div className="bg-yellow-600 rounded-lg p-4 text-center shadow-md">
-            <p>🎖 Completed all Boss Fights</p>
-          </div>
-          <div className="bg-yellow-600 rounded-lg p-4 text-center shadow-md">
-            <p>🎖 Escape from Maximum Security</p>
-          </div>
         </div>
       </div>
     </div>

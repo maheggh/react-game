@@ -191,7 +191,7 @@ const CarTheft = () => {
 
 const handleCheat = async () => {
   const token = localStorage.getItem('token');
-  const updatedMoney = money + 50000;
+  const updatedMoney = money + 5000000;
 
   try {
     const response = await fetch('/api/users/update', {
@@ -224,7 +224,7 @@ const handleCheat = async () => {
 };
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto p-4 mb-40">
       <h2 className="text-2xl font-bold mb-4">Car Theft</h2>
 
       <div className="grid grid-cols-3 gap-4">

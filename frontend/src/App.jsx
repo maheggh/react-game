@@ -13,8 +13,8 @@ import Bosses from "./pages/Bosses";
 import ScoreScreen from "./pages/Score";
 import Assassination from "./pages/Assassination";
 import RankNavbar from "./components/RankNavBar";
-import DeadPage from "./components/DeadPage"; 
-import { AuthProvider } from '../context/AuthContext';  // Import AuthProvider
+import DeadPage from "./pages/DeadPage"; 
+import { AuthProvider } from '../context/AuthContext';  
 
 const App = () => {
   return (

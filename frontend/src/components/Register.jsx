@@ -43,7 +43,7 @@ const Register = () => {
 
         if (data.token) {
           login(data.token);  // Automatically log the user in after registration
-          navigate('/');  // Redirect to user status page
+          navigate('/cartheft');  // Redirect to user status page
         }
       } else {
         setMessage(`Failed to register user: ${data.message}`);
