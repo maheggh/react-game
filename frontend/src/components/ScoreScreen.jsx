@@ -1,100 +1,98 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 
-const ScoreScreen = () => {
+const ScorePage = () => {
   const { user } = useContext(AuthContext);
-  const [money, setMoney] = useState(0);
-  const [rank, setRank] = useState(1);
-  const [inventory, setInventory] = useState([]);
-  const [missions, setMissions] = useState(0);
-  const [bossItems, setBossItems] = useState([]);
+  const [players, setPlayers] = useState([]);
+  const [sortField, setSortField] = useState('crimesPerformed'); // Default sorting by kills (using crimesPerformed as placeholder)
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [errorMessage, setErrorMessage] = useState('');
 
+  // Fetch player data on mount
   useEffect(() => {
-    const fetchUserData = async () => {
+    const fetchPlayerData = async () => {
       try {
-        const response = await fetch('/api/users/profile', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
+        const response = await fetch('/api/players');
         const data = await response.json();
         if (data.success) {
-          setMoney(data.userData.money);
-          setRank(data.userData.rank || 1); // Get rank from backend
-          setInventory(data.userData.inventory || []);
-          setBossItems(data.userData.bossItems || []);
-          setMissions(data.userData.missionsCompleted || 0); // Track missions
+          setPlayers(data.players);
+        } else {
+          setErrorMessage(data.message || 'Failed to fetch player data.');
         }
       } catch (error) {
-        console.error('Error fetching user data:', error);
+        console.error('Error fetching player data:', error);
+        setErrorMessage('Server error occurred.');
       }
     };
-    fetchUserData();
+    fetchPlayerData();
   }, []);
 
+  // Handle sorting
+  const handleSort = (field) => {
+    const order = sortField === field && sortOrder === 'asc' ? 'desc' : 'asc';
+    setSortField(field);
+    setSortOrder(order);
+  };
+
+  // Sort players based on the field and order
+  const sortedPlayers = [...players].sort((a, b) => {
+    if (sortOrder === 'asc') {
+      return a[sortField] > b[sortField] ? 1 : -1;
+    } else {
+      return a[sortField] < b[sortField] ? 1 : -1;
+    }
+  });
+
   return (
-    <div className="container mx-auto p-8">
-      <h1 className="text-4xl font-bold text-center mb-6 text-yellow-500">Your Score</h1>
+    <div className="container mx-auto p-6 text-white min-h-screen mb-40">
+      <h1 className="text-4xl font-bold mb-8 text-center text-green-500">Leaderboard</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {/* Money & Rank */}
-        <div className="bg-gradient-to-br from-purple-600 to-purple-800 text-white rounded-lg p-6 shadow-lg">
-          <h2 className="text-2xl font-semibold mb-4">Money & Rank</h2>
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-lg">💰 Money:</p>
-            <p className="text-2xl font-bold">${money}</p>
-          </div>
-          <div className="flex items-center justify-between">
-            <p className="text-lg">🔰 Rank:</p>
-            <p className="text-2xl font-bold">Rank {rank}</p>
-          </div>
-        </div>
+      {errorMessage && <p className="text-red-500 text-center mb-4">{errorMessage}</p>}
 
-        {/* Weapons Inventory */}
-        <div className="bg-gradient-to-br from-green-600 to-green-800 text-white rounded-lg p-6 shadow-lg">
-          <h2 className="text-2xl font-semibold mb-4">Weapons Inventory</h2>
-          <ul className="space-y-2">
-            {inventory.length > 0 ? (
-              inventory
-                .filter((item) => item.type === 'weapon')
-                .map((item, index) => (
-                  <li key={index} className="flex justify-between">
-                    <span>{item.name}</span>
-                    <span>🎯 {item.accuracy}%</span>
-                  </li>
-                ))
-            ) : (
-              <li>No weapons in your inventory.</li>
-            )}
-          </ul>
-        </div>
-
-        {/* Boss Items */}
-        <div className="bg-gradient-to-br from-red-600 to-red-800 text-white rounded-lg p-6 shadow-lg">
-          <h2 className="text-2xl font-semibold mb-4">Boss Items</h2>
-          <ul className="space-y-2">
-            {bossItems.length > 0 ? (
-              bossItems.map((item, index) => (
-                <li key={index} className="flex justify-between">
-                  <span>{item.name}</span>
-                  <img src={item.image} alt={item.name} className="w-8 h-8" />
-                </li>
-              ))
-            ) : (
-              <li>No boss items collected.</li>
-            )}
-          </ul>
-        </div>
-
-        {/* Missions Completed */}
-        <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white rounded-lg p-6 shadow-lg">
-          <h2 className="text-2xl font-semibold mb-4">Missions Completed</h2>
-          <p className="text-2xl font-bold text-center">{missions}</p>
-          <p className="text-center">Assassinations, heists, and more!</p>
-        </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full table-auto bg-gray-800 rounded-lg text-pink-400">
+          <thead>
+            <tr>
+              <th className="px-4 py-2 cursor-pointer" onClick={() => handleSort('username')}>
+                Username {sortField === 'username' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+              </th>
+              <th className="px-4 py-2 cursor-pointer" onClick={() => handleSort('crimesPerformed')}>
+                Kills {sortField === 'crimesPerformed' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+              </th>
+              <th className="px-4 py-2 cursor-pointer color-" onClick={() => handleSort('rank')}>
+                Rank {sortField === 'rank' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+              </th>
+              <th className="px-4 py-2 cursor-pointer" onClick={() => handleSort('money')}>
+                Money {sortField === 'money' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+              </th>
+              <th className="px-4 py-2 cursor-pointer" onClick={() => handleSort('inventory')}>
+                Boss Items {sortField === 'inventory' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+              </th>
+              <th className="px-4 py-2 cursor-pointer" onClick={() => handleSort('isAlive')}>
+                Status {sortField === 'isAlive' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedPlayers.map((player) => (
+              <tr key={player._id} className="bg-gray-700 hover:bg-gray-800">
+                <td className="border px-4 py-2">{player.username}</td>
+                <td className="border px-4 py-2">{player.crimesPerformed}</td>
+                <td className="border px-4 py-2">{player.rank}</td>
+                <td className="border px-4 py-2">${player.money.toLocaleString()}</td>
+                <td className="border px-4 py-2">
+                  {player.inventory.filter(item => item.name.includes('Boss')).length}
+                </td>
+                <td className={`border px-4 py-2 ${player.isAlive ? 'text-green-500' : 'text-red-500'}`}>
+                  {player.isAlive ? 'Alive' : 'Dead'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 };
 
-export default ScoreScreen;
+export default ScorePage;
