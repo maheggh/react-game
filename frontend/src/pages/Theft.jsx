@@ -1,4 +1,4 @@
-// components/Theft.jsx
+// frontend/src/components/Theft.jsx
 
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
@@ -268,26 +268,28 @@ const Theft = () => {
     if (failureMessage) {
       const timer = setTimeout(() => {
         setFailureMessage('');
-      }, 3000); // 3000ms = 3 seconds
+      }, 3000); 
 
-      return () => clearTimeout(timer); // Cleanup if component unmounts or message changes
+      return () => clearTimeout(timer); 
     }
   }, [failureMessage]);
 
   if (loading || isFetching) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="text-xl font-semibold">Loading...</div>
+      <div className="flex justify-center items-center h-screen bg-gray-100">
+        <div className="text-xl font-semibold text-gray-700">Loading...</div>
       </div>
-    ); // Optional: Loading indicator while AuthContext initializes or fetching stolen items
+    ); 
   }
 
   return (
-    <div className="container mx-auto p-6 pb-40">
+    <div className="container mx-auto p-6 pb-40 bg-white rounded-lg shadow-md">
       {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold text-gray-800">Theft Simulator</h1>
-        <p className="text-gray-500 mt-2 p-4 text-l">Be a stupid cleptomaniac and ruin someones day by thieving!</p>
+        <p className="text-gray-500 mt-2 p-4 text-lg">
+          Why not steal as well, I mean, you do all the other sketchy activities already.
+        </p>
       </div>
 
       {/* Theft Categories */}
@@ -295,14 +297,16 @@ const Theft = () => {
         {Object.keys(items).map((category, index) => (
           <div
             key={index}
-            className="bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col items-center p-4"
+            className="bg-gray-100 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col items-center p-4"
           >
-            <h3 className="text-2xl font-semibold text-gray-700 mb-4">{category}</h3>
+            <h3 className="text-2xl font-semibold text-gray-700 mb-2">{category}</h3>
             <img
               src={getCategoryImagePath(category)}
               alt={category}
-              className="w-32 h-32 object-contain mb-4"
-              onError={(e) => { e.target.src = '/assets/default-category.png'; }} // Fallback
+              className="w-50 h-50 object-contain mb-4"
+              onError={(e) => {
+                e.target.src = '/assets/default-category.png';
+              }} // Fallback
             />
             <button
               className={`w-full py-2 px-4 rounded-md text-white ${
@@ -360,8 +364,10 @@ const Theft = () => {
           <img
             src="/assets/jailpic.jpg"
             alt="Jail"
-            className="w-16 h-16 object-cover ml-auto rounded-full border-2 border-red-500"
-            onError={(e) => { e.target.src = '/assets/default-category.png'; }} // Fallback
+            className="w-40 h-40 object-cover ml-auto rounded-full border-2 border-red-500"
+            onError={(e) => {
+              e.target.src = '/assets/default-category.png';
+            }} // Fallback
           />
         </div>
       )}
@@ -376,22 +382,24 @@ const Theft = () => {
           {showPocket ? 'Hide Pocket' : 'Show Pocket'}
         </button>
         {showPocket && (
-          <div className="mt-4 bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-semibold text-gray-700 mb-4">Your Pocket</h2>
+          <div className="mt-4 bg-gray-50 p-6 rounded-lg shadow-md">
+            <h2 className="text-2xl font-semibold text-gray-800 mb-4">Your Pocket</h2>
             {stolenItems.length > 0 ? (
               <ul className="space-y-4">
                 {stolenItems.map((item, index) => (
-                  <li key={index} className="flex items-center justify-between bg-gray-100 p-4 rounded-lg">
+                  <li key={index} className="flex items-center justify-between bg-white p-4 rounded-lg shadow">
                     <div className="flex items-center">
                       <img
                         src={getItemImagePath(item.name)}
                         alt={item.name}
-                        className="w-16 h-16 object-contain mr-4"
-                        onError={(e) => { e.target.src = '/assets/default-item.png'; }} // Fallback
+                        className="w-16 h-16 object-contain rounded-md mr-4"
+                        onError={(e) => {
+                          e.target.src = '/assets/default-item.png';
+                        }} // Fallback
                       />
                       <div>
-                        <h3 className="text-xl font-medium text-gray-800">{item.name}</h3>
-                        <p className="text-gray-600">Price: ${item.price}</p>
+                        <h3 className="text-xl font-medium text-gray-700">{item.name}</h3>
+                        <p className="text-gray-500">Price: ${item.price}</p>
                       </div>
                     </div>
                     <button

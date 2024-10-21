@@ -1,47 +1,54 @@
+// frontend/src/components/Home.jsx
+
 import React, { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import Register from '../components/Register';
 import Login from '../components/Login';
 import UserStatus from '../components/UserStatus';
+import styles from './Home.module.css';
 
 const Home = () => {
   const { isLoggedIn } = useContext(AuthContext); 
 
   return (
-    <div className="bg-pink-100 p-6 md:p-12">
-      <div className="text-center my-8">
+    <div className="min-h-screen bg-gray-100 grid bg-gray-200 items-center justify-center p-6 md:p-12">
+      {/* Banner Section */}
+      <div className="w-full max-w-5xl py-5">
         <img
           src="/assets/potatoqueen_banner.png"
-          className="mx-auto w-full h-auto max-w-10xl object-cover"
+          className={`w-full h-auto object-cover rounded-lg ${styles.potatoQueenImage}`}
           alt="Potato Queen Banner"
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white p-8 rounded-md shadow-md">
+      {/* Content Grid */}
+      <div className={`w-full max-w-5xl bg-white p-8 rounded-lg shadow-md grid grid-cols-1 md:grid-cols-2 gap-8 ${styles.gameDescriptionContainer}`}>
+        {/* Welcome Text */}
         <div>
-          <h1 className="text-4xl font-bold text-purple-900 mb-4">
-            Welcome to the game!
+          <h1 className="text-4xl font-extrabold text-gray-800 mb-4">
+            Welcome to the Game!
           </h1>
-          <p className="text-lg text-gray-700 mb-4">
-            Enter the world of underground crime, where your ultimate goal is to
-            ascend the throne as the Potato Queen.
+          <p className={`text-lg text-gray-600 ${styles.gameText}`}>
+            Enter the world of underground crime, where your ultimate goal is to ascend the throne as the Potato Queen. Strategize your moves, steal valuable items, and build your empire in this thrilling simulation.
           </p>
         </div>
 
-        <div className="flex justify-center">
+        {/* Illustration/Image */}
+        <div className="flex items-center justify-center">
           <img
             src="/assets/potatopleb.png"
-            className="w-48 h-48 md:w-72 md:h-72"
+            className={`w-30 h-30 md:w-40 md:h-40 object-contain rounded-md shadow-md ${styles.potatoQueenImage}`}
             alt="Potato Pleb"
           />
         </div>
 
+        {/* Authentication Section */}
         <div className="col-span-2">
           {!isLoggedIn ? (
-            <>
+            <div className="flex flex-col space-y-6">
               <Register />
               <Login />
-            </>
+            </div>
           ) : (
             <UserStatus />
           )}
