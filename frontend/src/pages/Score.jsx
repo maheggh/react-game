@@ -49,7 +49,7 @@ const ScorePage = () => {
 
       {errorMessage && <p className="text-red-500 text-center mb-4">{errorMessage}</p>}
 
-      <div className="overflow-x-auto bg-gray-700">
+      <div className="overflow-x-auto bg-gray-700 ">
         <table className="min-w-full table-auto">
           <thead>
             <tr>

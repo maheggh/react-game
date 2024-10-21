@@ -1,5 +1,3 @@
-// controllers/assassinationController.js
-
 const User = require('../models/User');
 const { getRankForXp, xpThresholds } = require('../utils/rankCalculator');
 
@@ -41,12 +39,18 @@ exports.attemptAssassination = async (req, res) => {
     const successChance = calculateSuccessChance(attacker, target, weapon);
 
     if (Math.random() < successChance) {
+      // Successful assassination
+      attacker.kills += 1;
+      // Transfer all target's money, cars, weapons, and inventory to the attacker
+      transferAssets(attacker, target);
+
+      // Kill the target
       target.isAlive = false;
       await target.save();
 
       res.status(200).json({
         success: true,
-        message: `You have successfully assassinated ${target.username}!`,
+        message: `You have successfully assassinated ${target.username} and looted all their possessions!`,
       });
     } else {
       // Failed attempt, possible retaliation
@@ -124,4 +128,30 @@ const calculateRetaliationChance = (attacker, target) => {
   retaliationChance = Math.max(0.05, Math.min(retaliationChance, 0.8)); 
 
   return retaliationChance;
+};
+
+// Transfer assets from target to attacker
+const transferAssets = (attacker, target) => {
+  // Transfer money
+  attacker.money += target.money;
+  target.money = 0;
+
+  // Transfer cars
+  if (target.cars && target.cars.length > 0) {
+    attacker.cars = [...attacker.cars, ...target.cars];
+    target.cars = [];
+  }
+
+  // Transfer inventory (weapons, items, loot)
+  if (target.inventory && target.inventory.length > 0) {
+    target.inventory.forEach((item) => {
+      const existingItem = attacker.inventory.find((invItem) => invItem.name === item.name);
+      if (existingItem) {
+        existingItem.quantity += item.quantity; // Increment existing item quantity
+      } else {
+        attacker.inventory.push(item); // Add new item to attacker's inventory
+      }
+    });
+    target.inventory = [];
+  }
 };

@@ -19,6 +19,7 @@ const userSchema = new mongoose.Schema({
   rank: { type: String, default: 'Homeless Potato' },
   money: { type: Number, default: 0 },
   isAlive: { type: Boolean, default: true },
+  kills: { type: Number, default: 0 },
   lastAssassinationAttempt: { type: Date, default: null },
   cars: [
     {

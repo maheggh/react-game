@@ -17,17 +17,16 @@ const xpThresholds = {
   'Emperor of the Taters': 210000,
   'Potato Overlord': 270000,
   'The Ultimate Potato': 350000,
-  'Queen of All Spuds': 450000,  // Final Rank
+  'PotatoQueen': 450000, 
 };
 
-// Function to get rank based on XP and progress towards the next rank
 const getRankForXp = (xp) => {
-  let currentRank = 'Homeless Potato';  // Default rank
-  let nextRank = null;  // The next rank to aim for
-  let nextRankThreshold = null;  // XP needed for the next rank
-  let currentRankThreshold = 0;  // Current rank's XP threshold
+  let currentRank = 'Homeless Potato';  
+  let nextRank = null;  
+  let nextRankThreshold = null;  
+  let currentRankThreshold = 0;  
 
-  const ranks = Object.keys(xpThresholds);  // Get all ranks in order
+  const ranks = Object.keys(xpThresholds);  
 
   for (let i = 0; i < ranks.length; i++) {
     const rank = ranks[i];
@@ -35,20 +34,20 @@ const getRankForXp = (xp) => {
 
     if (xp >= threshold) {
       currentRank = rank;
-      currentRankThreshold = threshold;  // Update current rank threshold
+      currentRankThreshold = threshold;  
     } else {
       nextRank = rank;
-      nextRankThreshold = threshold;  // Set the next rank and its XP threshold
-      break;  // Stop as soon as we find the next rank
+      nextRankThreshold = threshold;  
+      break;  
     }
   }
 
   if (!nextRank) {
-    nextRank = 'Max Rank Achieved';  // No further rank if at the top
-    nextRankThreshold = currentRankThreshold;  // Cap at current rank's threshold
+    nextRank = 'Max Rank Achieved';  
+    nextRankThreshold = currentRankThreshold;  
   }
 
-  const xpForNextLevel = nextRankThreshold - xp;  // XP needed for the next rank
+  const xpForNextLevel = nextRankThreshold - xp;  
 
   return {
     currentRank,

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 
 const AssassinationPage = () => {
-  const { user, money, updateUserData, isAlive, setIsAlive } = useContext(AuthContext);
+  const { user, money, cars, updateUserData, isAlive, setIsAlive } = useContext(AuthContext);
   const [targets, setTargets] = useState([]);
   const [selectedTarget, setSelectedTarget] = useState(null);
   const [weapons, setWeapons] = useState([]);
@@ -12,9 +12,9 @@ const AssassinationPage = () => {
   const [userStats, setUserStats] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [scenarioImage, setScenarioImage] = useState('');
-  const [cooldown, setCooldown] = useState(null); // Cooldown state
+  const [cooldown, setCooldown] = useState(null); 
 
-  const COOLDOWN_TIME = 30 * 60 * 1000; // 30 minutes
+  const COOLDOWN_TIME = 0; // 30 * 60 * 1000; 
 
   // Fetch user stats and weapons on mount
   useEffect(() => {
@@ -30,7 +30,8 @@ const AssassinationPage = () => {
           setUserStats({
             level: data.userData.level,
             rank: data.userData.rank,
-            accuracy: data.userData.accuracy, 
+            accuracy: data.userData.accuracy,
+            kills: data.userData.kills, // Fetch the user's assassination kills
           });
           setWeapons(
             data.userData.inventory.filter(
@@ -99,33 +100,33 @@ const AssassinationPage = () => {
     setResultMessage('');
     setErrorMessage('');
     setIsLoading(true);
-
+  
     if (cooldown > 0) {
       setErrorMessage(`Please wait ${Math.ceil(cooldown / 60000)} minutes before your next attempt.`);
       setIsLoading(false);
       return;
     }
-
+  
     if (!selectedTarget) {
       setErrorMessage('You must select a target.');
       setIsLoading(false);
       return;
     }
-
+  
     if (!selectedWeapon) {
       setErrorMessage('You must select a weapon.');
       setIsLoading(false);
       return;
     }
-
+  
     if (money < 50000) {
       setErrorMessage('Not enough money. Assassination costs $50,000.');
       setIsLoading(false);
       return;
     }
-
+  
     const success = calculateOutcome(selectedWeapon.attributes.accuracy);
-
+  
     try {
       const response = await fetch('/api/assassinate', {
         method: 'POST',
@@ -138,16 +139,24 @@ const AssassinationPage = () => {
           weaponName: selectedWeapon.name,
         }),
       });
-
+  
       const data = await response.json();
-
+  
       if (response.ok && data.success) {
-        const newMoney = money - 50000;
-        updateUserData({ money: newMoney });
-        setResultMessage(success ? 'Assassination succeeded! congratulations you are a murderer now, how does it feel?' : 'Assassination failed, turns out you cant do anything right.');
+        const newMoney = money - 50000 + (data.lootMoney || 0);
+  
+        // Ensure 'cars' is always an array
+        const newCars = [...(cars || []), ...(data.lootCars || [])]; // If 'cars' or 'lootCars' is undefined, default to an empty array
+        const newInventory = [...(user.inventory || []), ...(data.lootInventory || [])]; // Same check for inventory
+  
+        // Update the user data with new money, cars, and inventory
+        updateUserData({ money: newMoney, cars: newCars, inventory: newInventory });
+  
+        setResultMessage(success ? `You assassinated ${selectedTarget.username} and looted all their possessions!` : 'Assassination failed, try again.');
         setScenarioImage(success ? '/assets/success.png' : '/assets/failure.png');
         localStorage.setItem('lastAssassinationAttempt', new Date());
         setCooldown(COOLDOWN_TIME);
+  
         if (data.userDied) {
           setIsAlive(false);
         }
@@ -166,7 +175,7 @@ const AssassinationPage = () => {
       setIsLoading(false);
     }
   };
-
+  
   return (
     <div className="container mx-auto p-4 text-white min-h-screen bg-gray-900 pt-20 pb-40 mt-8">
       <h1 className="text-4xl font-bold mb-8 text-center text-red-700">Assassination Mission</h1>
@@ -176,6 +185,11 @@ const AssassinationPage = () => {
       <h1 className='text-left p-4 text-lg'>Welcome to the potato underworld, where you can 'tactfully eliminate' other unsuspecting spuds. 
         But beware! Not every potato goes down without a fight—some have eyes on the back of their heads and might fry you instead. 
         Proceed with caution, or you might just be the one mashed!</h1>
+
+      {/* Display the user's current kills */}
+      <div className="text-center mb-4">
+        <p className="text-xl">Your Assassination Count: <span className="font-bold text-green-400">{userStats.kills || 0}</span></p>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         {/* Target Selection */}

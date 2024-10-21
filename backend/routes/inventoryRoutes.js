@@ -1,5 +1,4 @@
 // routes/inventoryRoutes.js
-
 const express = require('express');
 const router = express.Router();
 const inventoryController = require('../controllers/inventoryController');
@@ -18,7 +17,6 @@ router.post('/loot/collect', authMiddleware, inventoryController.collectLoot);
 
 // General Inventory Routes
 router.get('/', authMiddleware, inventoryController.getInventory);
-
 router.post('/update', authMiddleware, inventoryController.updateInventory);
 
 module.exports = router;
