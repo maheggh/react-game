@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
-import { AuthContext } from '../../context/AuthContext'; // Import AuthContext
+import { AuthContext } from '../context/AuthContext'; // Import AuthContext
 import styles from './Gambling.module.css'; // Import the CSS module
 
 const GamblingPage = () => {

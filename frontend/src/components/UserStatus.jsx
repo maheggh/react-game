@@ -1,7 +1,7 @@
 // pages/UserStatus.jsx
 
 import React, { useContext, useEffect, useState } from 'react';
-import { AuthContext } from '../../context/AuthContext';
+import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const UserStatus = () => {

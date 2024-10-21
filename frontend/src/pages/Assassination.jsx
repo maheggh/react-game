@@ -1,20 +1,31 @@
+// components/AssassinationPage.jsx
+
 import React, { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../../context/AuthContext';
+import { AuthContext } from '../context/AuthContext';
 
 const AssassinationPage = () => {
-  const { user, money, cars, updateUserData, isAlive, setIsAlive } = useContext(AuthContext);
+  const { 
+    user, 
+    money, 
+    cars, 
+    updateUserData, 
+    isAlive, 
+    setIsAlive, 
+    kills, // Access kills directly from context
+    setKills, // Optionally, if you need to set kills directly
+  } = useContext(AuthContext);
+  
   const [targets, setTargets] = useState([]);
   const [selectedTarget, setSelectedTarget] = useState(null);
   const [weapons, setWeapons] = useState([]);
   const [selectedWeapon, setSelectedWeapon] = useState(null);
   const [resultMessage, setResultMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [userStats, setUserStats] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [scenarioImage, setScenarioImage] = useState('');
   const [cooldown, setCooldown] = useState(null); 
 
-  const COOLDOWN_TIME = 0; // 30 * 60 * 1000; 
+  const COOLDOWN_TIME = 30 * 60 * 1000; // 30 minutes
 
   // Fetch user stats and weapons on mount
   useEffect(() => {
@@ -27,12 +38,7 @@ const AssassinationPage = () => {
         });
         const data = await response.json();
         if (data.success) {
-          setUserStats({
-            level: data.userData.level,
-            rank: data.userData.rank,
-            accuracy: data.userData.accuracy,
-            kills: data.userData.kills, // Fetch the user's assassination kills
-          });
+          // No need to set kills here since it's managed by AuthContext
           setWeapons(
             data.userData.inventory.filter(
               (item) => item.attributes && item.attributes.accuracy
@@ -149,9 +155,10 @@ const AssassinationPage = () => {
         const newCars = [...(cars || []), ...(data.lootCars || [])]; // If 'cars' or 'lootCars' is undefined, default to an empty array
         const newInventory = [...(user.inventory || []), ...(data.lootInventory || [])]; // Same check for inventory
   
-        // Update the user data with new money, cars, and inventory
-        updateUserData({ money: newMoney, cars: newCars, inventory: newInventory });
+        // Update the user data with new money, cars, inventory, and kills
+        updateUserData({ money: newMoney, cars: newCars, inventory: newInventory, kills: data.updatedKills });
   
+        // setKills is handled by AuthContext, no need to set it here
         setResultMessage(success ? `You assassinated ${selectedTarget.username} and looted all their possessions!` : 'Assassination failed, try again.');
         setScenarioImage(success ? '/assets/success.png' : '/assets/failure.png');
         localStorage.setItem('lastAssassinationAttempt', new Date());
@@ -182,13 +189,18 @@ const AssassinationPage = () => {
 
       {/* Error Message */}
       {errorMessage && <p className="text-red-500 text-center mb-4">{errorMessage}</p>}
-      <h1 className='text-left p-4 text-lg'>Welcome to the potato underworld, where you can 'tactfully eliminate' other unsuspecting spuds. 
+      
+      <h1 className='text-left p-4 text-lg'>
+        Welcome to the potato underworld, where you can 'tactfully eliminate' other unsuspecting spuds. 
         But beware! Not every potato goes down without a fight—some have eyes on the back of their heads and might fry you instead. 
-        Proceed with caution, or you might just be the one mashed!</h1>
+        Proceed with caution, or you might just be the one mashed!
+      </h1>
 
       {/* Display the user's current kills */}
       <div className="text-center mb-4">
-        <p className="text-xl">Your Assassination Count: <span className="font-bold text-green-400">{userStats.kills || 0}</span></p>
+        <p className="text-xl">
+          Your Assassination Count: <span className="font-bold text-green-400">{kills}</span>
+        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
@@ -248,18 +260,30 @@ const AssassinationPage = () => {
       </div>
 
       {/* Result Message */}
-      {resultMessage && <p className="text-green-400 text-center text-lg mb-4 p-3 bg-gray-700 rounded-md">{resultMessage}</p>}
+      {resultMessage && (
+        <p className="text-green-400 text-center text-lg mb-4 p-3 bg-gray-700 rounded-md">
+          {resultMessage}
+        </p>
+      )}
 
       {/* Display Scenario Image */}
       {scenarioImage && (
         <div className="flex justify-center mb-6">
-          <img src={scenarioImage} alt="Assassination Scenario" className="w-1/2 h-auto rounded-md shadow-md" />
+          <img 
+            src={scenarioImage} 
+            alt="Assassination Scenario" 
+            className="w-1/2 h-auto rounded-md shadow-md" 
+            loading="lazy" // Added lazy loading
+            onError={(e) => { e.target.src = '/assets/default-category.png'; }} // Fallback image
+          />
         </div>
       )}
 
       {/* Cooldown Timer */}
       {cooldown > 0 && (
-        <p className="text-center text-red-500 mb-4">Next attempt available in: {Math.floor(cooldown / 60000)} minutes</p>
+        <p className="text-center text-red-500 mb-4">
+          Next attempt available in: {Math.floor(cooldown / 60000)} minutes
+        </p>
       )}
 
       {/* Assassination Button */}
@@ -267,7 +291,9 @@ const AssassinationPage = () => {
         <button
           onClick={attemptAssassination}
           disabled={isLoading || cooldown > 0}
-          className={`bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full transition duration-300 ease-in-out ${isLoading || cooldown > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full transition duration-300 ease-in-out ${
+            isLoading || cooldown > 0 ? 'opacity-50 cursor-not-allowed' : ''
+          }`}
         >
           {isLoading ? (
             <div className="spinner-border animate-spin inline-block w-4 h-4 border-2 rounded-full"></div>

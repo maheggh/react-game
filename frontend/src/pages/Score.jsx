@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../../context/AuthContext'; // Import AuthContext
+import { AuthContext } from '../context/AuthContext'; // Import AuthContext
 
 const ScorePage = () => {
   const { user } = useContext(AuthContext);

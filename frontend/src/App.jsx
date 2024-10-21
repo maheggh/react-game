@@ -14,7 +14,7 @@ import ScoreScreen from "./pages/Score";
 import Assassination from "./pages/Assassination";
 import RankNavbar from "./components/RankNavBar";
 import DeadPage from "./pages/DeadPage"; 
-import { AuthProvider } from '../context/AuthContext';  
+import { AuthProvider } from './context/AuthContext';  
 
 const App = () => {
   return (

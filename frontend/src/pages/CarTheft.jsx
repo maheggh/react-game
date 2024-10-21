@@ -1,7 +1,7 @@
 // CarTheft.js
 
 import React, { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../../context/AuthContext';
+import { AuthContext } from '../context/AuthContext';
 
 const CarTheft = () => {
   const { user, xp, rank, money, updateUserData } = useContext(AuthContext);

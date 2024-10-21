@@ -1,49 +1,59 @@
+// controllers/playerController.js
+
 const User = require('../models/User');
 
-// Fetch all player data for the leaderboard with sorting and filtering options
+/**
+ * Fetches all players for the leaderboard.
+ * Allows sorting by 'kills', 'money', 'rank', 'username', and 'bossItems'.
+ */
 exports.getPlayers = async (req, res) => {
   try {
-    const { sortBy = 'money', order = 'desc' } = req.query;
+    const { sortBy = 'kills', order = 'desc' } = req.query;
+
+    // Define valid sort fields
+    const validSortFields = ['kills', 'money', 'rank', 'username'];
+    if (!validSortFields.includes(sortBy)) {
+      return res.status(400).json({ success: false, message: 'Invalid sort field.' });
+    }
+
+    // Define sort order
+    const sortOrder = order === 'asc' ? 1 : -1;
 
     // Fetch players from the database with necessary fields
-    const players = await User.find({}, 'username crimesPerformed rank money isAlive inventory').lean();
+    // Exclude 'inventory' to reduce payload; however, we need it to count 'bossItems'
+    const players = await User.find({}, 'username kills rank money isAlive inventory').lean();
 
-    // Format players by counting boss items, safely handling undefined or empty inventory
+    // Format players by counting boss items
     const formattedPlayers = players.map(player => ({
       ...player,
-      bossItems: player.inventory ? player.inventory.filter(item => item.name.includes('Boss')).length : 0,
+      bossItems: player.inventory ? player.inventory.filter(item => item.name.toLowerCase().includes('boss')).length : 0,
     }));
 
-    // Sorting logic
+    // Sort players based on sortBy and sortOrder
     const sortedPlayers = formattedPlayers.sort((a, b) => {
-      if (sortBy === 'money') {
-        return order === 'asc' ? a.money - b.money : b.money - a.money;
-      } else if (sortBy === 'rank') {
-        return order === 'asc' ? a.rank.localeCompare(b.rank) : b.rank.localeCompare(a.rank);
-      } else if (sortBy === 'crimesPerformed') {
-        return order === 'asc' ? a.crimesPerformed - b.crimesPerformed : b.crimesPerformed - a.crimesPerformed;
-      } else if (sortBy === 'bossItems') {
-        return order === 'asc' ? a.bossItems - b.bossItems : b.bossItems - a.bossItems;
-      }
+      if (a[sortBy] > b[sortBy]) return sortOrder;
+      if (a[sortBy] < b[sortBy]) return -sortOrder;
       return 0;
     });
 
     res.status(200).json({ success: true, players: sortedPlayers });
   } catch (error) {
     console.error('Error fetching player data:', error);
-    res.status(500).json({ success: false, message: 'Error fetching player data' });
+    res.status(500).json({ success: false, message: 'Error fetching player data.' });
   }
 };
 
-
-// Fetch a specific player's profile by ID
+/**
+ * Fetches a specific player's profile by ID.
+ * Includes 'kills' and 'bossItems'.
+ */
 exports.getPlayerById = async (req, res) => {
   try {
     const playerId = req.params.id;
     const player = await User.findById(playerId).lean();
 
     if (!player) {
-      return res.status(404).json({ success: false, message: 'Player not found' });
+      return res.status(404).json({ success: false, message: 'Player not found.' });
     }
 
     // Safely count boss items in the player's inventory
@@ -58,6 +68,6 @@ exports.getPlayerById = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching player:', error);
-    res.status(500).json({ success: false, message: 'Error fetching player data' });
+    res.status(500).json({ success: false, message: 'Error fetching player data.' });
   }
 };

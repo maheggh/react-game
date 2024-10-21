@@ -1,3 +1,5 @@
+// controllers/assassinationController.js
+
 const User = require('../models/User');
 const { getRankForXp, xpThresholds } = require('../utils/rankCalculator');
 
@@ -40,7 +42,9 @@ exports.attemptAssassination = async (req, res) => {
 
     if (Math.random() < successChance) {
       // Successful assassination
-      attacker.kills += 1;
+      attacker.kills += 1; // Increment kills
+      await attacker.save(); // Save the attacker with updated kills
+
       // Transfer all target's money, cars, weapons, and inventory to the attacker
       transferAssets(attacker, target);
 
@@ -51,6 +55,10 @@ exports.attemptAssassination = async (req, res) => {
       res.status(200).json({
         success: true,
         message: `You have successfully assassinated ${target.username} and looted all their possessions!`,
+        updatedKills: attacker.kills, // Return updated kills
+        lootMoney: target.money, // Assuming all target's money is looted
+        lootCars: target.cars, // Assuming all target's cars are looted
+        lootInventory: target.inventory, // Assuming all target's inventory is looted
       });
     } else {
       // Failed attempt, possible retaliation

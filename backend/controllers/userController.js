@@ -28,6 +28,7 @@ exports.registerUser = async (req, res) => {
       stolenItems: [],
       inventory: [],
       bossItems: [],
+      kills: 0,
     });
 
     await newUser.save();
@@ -82,6 +83,7 @@ exports.loginUser = async (req, res) => {
         xp: user.xp,
         rank: user.rank,
         isAlive: user.isAlive,
+        kills: user.kills,
       },
     });
   } catch (error) {
@@ -118,6 +120,7 @@ exports.getUserData = async (req, res) => {
         nextRankThreshold: rankInfo.nextRankThreshold, 
         currentRankThreshold: rankInfo.currentRankThreshold, 
         isAlive: user.isAlive, 
+        kills: user.kills,
       },
     });
   } catch (error) {
@@ -176,6 +179,7 @@ exports.getUserProfile = async (req, res) => {
         bossItems: user.bossItems,
         xp: user.xp, // Current XP
         rank: rankInfo.currentRank, // Current rank
+        kills: user.kills, 
         nextRank: rankInfo.nextRank, // Next rank
         nextRankThreshold: rankInfo.nextRankThreshold, // XP needed for next rank
         currentRankThreshold: rankInfo.currentRankThreshold, // XP threshold for current rank
