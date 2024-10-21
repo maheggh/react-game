@@ -5,6 +5,7 @@ const BossesPage = () => {
   const { user } = useContext(AuthContext);
   const [money, setMoney] = useState(0);
   const [inventory, setInventory] = useState([]);
+  const [bossItems, setBossItems] = useState([]); // Initialize bossItems state
   const [selectedTarget, setSelectedTarget] = useState('');
   const [selectedWeapon, setSelectedWeapon] = useState('');
   const [bulletsUsed, setBulletsUsed] = useState(1);
@@ -69,8 +70,9 @@ const BossesPage = () => {
         });
         const data = await response.json();
         if (data.success) {
-          setInventory(data.userData.inventory || []);
+          setInventory(data.userData.inventory || []);  // Set regular inventory
           setMoney(data.userData.money || 0);
+          setBossItems(data.userData.bossItems || []);  // Set boss items
         } else {
           setFailureMessage(data.message || 'Failed to fetch user data.');
         }
@@ -115,57 +117,74 @@ const BossesPage = () => {
   const attemptBossFight = async () => {
     setSuccessMessage('');
     setFailureMessage('');
-
+  
     const selectedWeaponItem = inventory.find((item) => item.name === selectedWeapon);
-
+  
     if (!selectedWeaponItem || !selectedWeaponItem.attributes.accuracy) {
       setFailureMessage("You don't have a valid weapon selected.");
       return;
     }
-
+  
     if (!selectedTarget) {
       setFailureMessage('You have not selected a boss.');
       return;
     }
-
+  
     const bulletsCost = bulletsUsed * 100; 
     if (money < bulletsCost) {
       setFailureMessage('You do not have enough money to execute the assassination.');
       return;
     }
-
+  
     const targetChance = getTargetChance(selectedTarget);
     const successChance = calculateSuccessChance(
       selectedWeaponItem.attributes.accuracy,
       bulletsUsed,
       targetChance
     );
-
+  
     const updatedMoney = money - bulletsCost;
     await updateUserMoney(updatedMoney);
-
+  
     if (Math.random() < successChance) {
       const loot = bosses[selectedTarget].loot;
-      const updatedInventory = [...inventory];
-      const existingLoot = updatedInventory.find((item) => item.name === loot.name);
-
-      if (existingLoot) {
-        existingLoot.quantity += 1;
+  
+      const updatedBossItems = [...bossItems];
+      const existingBossItem = updatedBossItems.find((item) => item.name === loot.name);
+  
+      if (existingBossItem) {
+        existingBossItem.quantity += 1;
       } else {
-        updatedInventory.push({
+        updatedBossItems.push({
           name: loot.name,
           quantity: 1,
-          price: 0,
-          attributes: {},
           image: loot.image,
         });
       }
-
-      setInventory(updatedInventory);
-      await updateUserInventory(updatedInventory);
+  
+      setBossItems(updatedBossItems);  // Update state
+  
+      await updateUserBossItems(updatedBossItems);  // Call API to save boss items to the backend
+  
       setSuccessMessage(`You defeated ${selectedTarget} and earned ${loot.name}!`);
     } else {
       setFailureMessage(`The fight with ${selectedTarget} failed or the target escaped.`);
+    }
+  };
+  
+  const updateUserBossItems = async (updatedBossItems) => {
+    try {
+      const response = await fetch('/api/users/updateBossItems', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({ bossItems: updatedBossItems }),
+      });
+      if (!response.ok) throw new Error('Failed to update boss items.');
+    } catch (error) {
+      setFailureMessage('Server error occurred while updating boss items.');
     }
   };
 
@@ -281,19 +300,17 @@ const BossesPage = () => {
       <div className="mt-8">
         <h2 className="text-3xl font-bold mb-4">Boss Items</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {inventory.filter((item) => bossItemNames.includes(item.name)).length > 0 ? (
-            inventory
-              .filter((item) => bossItemNames.includes(item.name))
-              .map((item, index) => (
-                <div key={index} className="bg-gray-800 p-4 rounded-lg text-center">
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-24 h-24 object-contain mx-auto mb-2"
-                  />
-                  <p className="font-semibold text-white">{item.name}</p>
-                </div>
-              ))
+          {bossItems.length > 0 ? (
+            bossItems.map((item, index) => (
+              <div key={index} className="bg-gray-800 p-4 rounded-lg text-center">
+                <img
+                  src={item.image}
+                  alt={item.name}
+                  className="w-24 h-24 object-contain mx-auto mb-2"
+                />
+                <p className="font-semibold text-white">{item.name}</p>
+              </div>
+            ))
           ) : (
             <p className="text-gray-400">No boss items in your inventory.</p>
           )}

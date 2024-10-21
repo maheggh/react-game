@@ -49,8 +49,6 @@ exports.registerUser = async (req, res) => {
     res.status(500).json({ message: 'Failed to register user' });
   }
 };
-
-// Login User Function
 exports.loginUser = async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -91,9 +89,6 @@ exports.loginUser = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to login user' });
   }
 };
-
-
-// Get User Data Function
 exports.getUserData = async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select('-password'); // Exclude password
@@ -128,8 +123,6 @@ exports.getUserData = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to fetch user data' });
   }
 };
-
-// Update User Data Function
 exports.updateUserData = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -258,5 +251,27 @@ exports.getTargets = async (req, res) => {
   } catch (error) {
     console.error('Error fetching targets:', error);
     res.status(500).json({ success: false, message: 'Error fetching targets' });
+  }
+};
+exports.updateBossItems = async (req, res) => {
+  const { bossItems } = req.body;
+
+  try {
+    const user = await User.findById(req.user.userId);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Update the user's boss items
+    user.bossItems = bossItems;
+
+    // Save the user data
+    await user.save();
+
+    res.json({ message: 'Boss items updated successfully', bossItems: user.bossItems });
+  } catch (error) {
+    console.error('Error updating boss items:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
