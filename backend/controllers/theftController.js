@@ -41,7 +41,7 @@ exports.stealItem = async (req, res) => {
     if (roll <= stealChance) {
       // Successful theft
       user.stolenItems.push(selectedItem);
-      const xpGained = 50;
+      const xpGained = 100;
       user.xp += xpGained;
       user.rank = getRankForXp(user.xp).currentRank;
 

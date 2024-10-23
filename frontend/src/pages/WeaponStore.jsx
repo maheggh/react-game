@@ -1,3 +1,5 @@
+// WeaponStore.jsx
+
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 
@@ -97,6 +99,11 @@ const WeaponStore = () => {
     }
   };
 
+  // Helper function to check if the user already owns a weapon
+  const userOwnsWeapon = (weaponName) => {
+    return inventory.some((item) => item.name === weaponName);
+  };
+
   return (
     <div className="container mx-auto p-6 min-h-screen bg-gray-900 text-white pb-40 pt-20">
       <h1 className="text-4xl font-bold mb-6 text-center text-yellow-400">Potato Weapon Store</h1>
@@ -120,12 +127,21 @@ const WeaponStore = () => {
               <h2 className="text-lg font-semibold mb-1 text-yellow-300">{weapon.name}</h2>
               <p className="text-gray-400 mb-1">Price: ${weapon.price}</p>
               <p className="text-gray-400 mb-2">Accuracy: {weapon.accuracy}%</p>
-              <button
-                onClick={() => handleBuyWeapon(weapon.id)}
-                className="bg-red-600 hover:bg-red-700 text-white py-1 px-10 rounded-lg transition duration-300"
-              >
-                Buy
-              </button>
+              {userOwnsWeapon(weapon.name) ? (
+                <button
+                  disabled
+                  className="bg-gray-500 text-white py-1 px-10 rounded-lg cursor-not-allowed"
+                >
+                  Owned
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleBuyWeapon(weapon.id)}
+                  className="bg-red-600 hover:bg-red-700 text-white py-1 px-10 rounded-lg transition duration-300"
+                >
+                  Buy
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -141,14 +157,16 @@ const WeaponStore = () => {
             {inventory.map((invItem, index) => (
               <li key={index} className="flex justify-between items-center text-xl">
                 <span>
-                  {invItem.name} - Quantity: {invItem.quantity}
+                  {invItem.name}
                 </span>
-                <button
-                  onClick={() => handleSellWeapon(invItem.name)}
-                  className="bg-blue-600 hover:bg-blue-800 text-white py-1 px-20 rounded-lg transition duration-300"
-                >
-                  Sell for 50%
-                </button>
+                {invItem.attributes?.accuracy && (
+                  <button
+                    onClick={() => handleSellWeapon(invItem.name)}
+                    className="bg-blue-600 hover:bg-blue-800 text-white py-1 px-20 rounded-lg transition duration-300"
+                  >
+                    Sell for 50%
+                  </button>
+                )}
               </li>
             ))}
           </ul>

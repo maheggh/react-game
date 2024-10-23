@@ -2,10 +2,10 @@ import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 
 const BossesPage = () => {
-  const { user } = useContext(AuthContext);
+  const { user, updateUserData } = useContext(AuthContext); // Ensure updateUserData is available in the context
   const [money, setMoney] = useState(0);
   const [inventory, setInventory] = useState([]);
-  const [bossItems, setBossItems] = useState([]); // Initialize bossItems state
+  const [bossItems, setBossItems] = useState([]); 
   const [selectedTarget, setSelectedTarget] = useState('');
   const [selectedWeapon, setSelectedWeapon] = useState('');
   const [bulletsUsed, setBulletsUsed] = useState(1);
@@ -13,53 +13,59 @@ const BossesPage = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [failureMessage, setFailureMessage] = useState('');
 
-  // Define bosses and their loot
   const bosses = {
     'Potato President': {
       name: 'Presidential Medal',
       image: '/assets/potato-president.png',
       loot: { name: 'Presidential Medal', image: '/assets/presidential-medal.png' },
+      xpReward: 1000, 
     },
     'Potato Dragon': {
       name: "Dragon's Hoard",
       image: '/assets/potato-dragon.png',
       loot: { name: "Dragon's Hoard", image: '/assets/dragon-hoard.png' },
+      xpReward: 2000,
     },
     'Potato Don': {
       name: 'Mafia Ring',
       image: '/assets/potato-boss.png',
       loot: { name: 'Mafia Ring', image: '/assets/mafia-fortune.png' },
+      xpReward: 1500,
     },
     'Spud Spy': {
       name: 'Invisible Cloak',
       image: '/assets/spud-spy.png',
       loot: { name: 'Invisible Cloak', image: '/assets/invisible-cloak.png' },
+      xpReward: 1200,
     },
     'Potato Pirate': {
       name: "Pirate's Compass",
       image: '/assets/potato-pirate.png',
       loot: { name: "Pirate's Compass", image: '/assets/pirate-compass.png' },
+      xpReward: 1800,
     },
     'Gourmet Chef Tater': {
       name: 'Golden Spatula',
       image: '/assets/gourmet-chef.png',
       loot: { name: 'Golden Spatula', image: '/assets/golden-spatula.png' },
+      xpReward: 1700,
     },
     'Astronaut Spudnik': {
       name: 'Star Dust',
       image: '/assets/potato-astronaut.png',
       loot: { name: 'Star Dust', image: '/assets/star-dust.png' },
+      xpReward: 2500,
     },
     'Sheriff Tater': {
       name: "Sheriff's Badge",
       image: '/assets/sheriff-tater.png',
       loot: { name: "Sheriff's Badge", image: '/assets/sheriffs-badge.png' },
+      xpReward: 1400,
     },
   };
 
   const bossItemNames = Object.values(bosses).map((boss) => boss.loot.name);
 
-  // Fetch user data on mount
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -70,9 +76,9 @@ const BossesPage = () => {
         });
         const data = await response.json();
         if (data.success) {
-          setInventory(data.userData.inventory || []);  // Set regular inventory
+          setInventory(data.userData.inventory || []);
           setMoney(data.userData.money || 0);
-          setBossItems(data.userData.bossItems || []);  // Set boss items
+          setBossItems(data.userData.bossItems || []);
         } else {
           setFailureMessage(data.message || 'Failed to fetch user data.');
         }
@@ -84,14 +90,12 @@ const BossesPage = () => {
     fetchUserData();
   }, []);
 
-  // Handle boss selection and display boss image
   const handleSelectBoss = (e) => {
     const boss = e.target.value;
     setSelectedTarget(boss);
     setBossImage(bosses[boss]?.image || '');
   };
 
-  // Handle weapon selection
   const handleSelectWeapon = (e) => {
     setSelectedWeapon(e.target.value);
   };
@@ -117,41 +121,41 @@ const BossesPage = () => {
   const attemptBossFight = async () => {
     setSuccessMessage('');
     setFailureMessage('');
-  
+
     const selectedWeaponItem = inventory.find((item) => item.name === selectedWeapon);
-  
+
     if (!selectedWeaponItem || !selectedWeaponItem.attributes.accuracy) {
       setFailureMessage("You don't have a valid weapon selected.");
       return;
     }
-  
+
     if (!selectedTarget) {
       setFailureMessage('You have not selected a boss.');
       return;
     }
-  
-    const bulletsCost = bulletsUsed * 100; 
+
+    const bulletsCost = bulletsUsed * 100;
     if (money < bulletsCost) {
       setFailureMessage('You do not have enough money to execute the assassination.');
       return;
     }
-  
+
     const targetChance = getTargetChance(selectedTarget);
     const successChance = calculateSuccessChance(
       selectedWeaponItem.attributes.accuracy,
       bulletsUsed,
       targetChance
     );
-  
+
     const updatedMoney = money - bulletsCost;
     await updateUserMoney(updatedMoney);
-  
+
     if (Math.random() < successChance) {
       const loot = bosses[selectedTarget].loot;
-  
+
       const updatedBossItems = [...bossItems];
       const existingBossItem = updatedBossItems.find((item) => item.name === loot.name);
-  
+
       if (existingBossItem) {
         existingBossItem.quantity += 1;
       } else {
@@ -161,17 +165,24 @@ const BossesPage = () => {
           image: loot.image,
         });
       }
-  
-      setBossItems(updatedBossItems);  // Update state
-  
-      await updateUserBossItems(updatedBossItems);  // Call API to save boss items to the backend
-  
-      setSuccessMessage(`You defeated ${selectedTarget} and earned ${loot.name}!`);
+
+      setBossItems(updatedBossItems);
+
+      await updateUserBossItems(updatedBossItems);
+
+      const xpGained = bosses[selectedTarget].xpReward;
+      const updatedXp = user.xp + xpGained;
+
+      await updateUserXP(updatedXp);
+
+      updateUserData({ xp: updatedXp, rank: user.rank }); // Update XP and rank in the global context
+
+      setSuccessMessage(`You defeated ${selectedTarget}, earned ${loot.name}, and gained ${xpGained} XP!`);
     } else {
       setFailureMessage(`The fight with ${selectedTarget} failed or the target escaped.`);
     }
   };
-  
+
   const updateUserBossItems = async (updatedBossItems) => {
     try {
       const response = await fetch('/api/users/updateBossItems', {
@@ -206,26 +217,31 @@ const BossesPage = () => {
     }
   };
 
-  const updateUserInventory = async (updatedInventory) => {
+  const updateUserXP = async (updatedXp) => {
     try {
-      const response = await fetch('/api/inventory/update', {
+      const response = await fetch('/api/users/updateXP', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify({ inventory: updatedInventory }),
+        body: JSON.stringify({ xp: updatedXp }),
       });
-      if (!response.ok) setFailureMessage('Failed to update inventory.');
+      if (!response.ok) throw new Error('Error updating XP.');
     } catch (error) {
-      setFailureMessage('Server error occurred while updating inventory.');
+      setFailureMessage('Server error occurred while updating XP.');
     }
   };
 
   return (
     <div className="container mx-auto p-4 min-h-screen bg-gray-900 text-white pb-40">
       <h1 className="text-4xl font-bold mb-6 text-center text-yellow-400">Boss Fights</h1>
-
+      <h1 className='text-left p-4 text-lg'>
+        Ah, so you think you're ready to take on the bosses, huh? How adorable.
+        A little couch potato like you, stepping up to face legends like the Potato Don and the Spud Spy.
+        Don't get too excited—these aren't your average garden-variety tubers. But sure, give it a shot.
+        Maybe, just maybe, you'll survive long enough to earn a shiny trinket... or end up mashed like the rest of them."
+      </h1>
       <div className="mb-6 text-xl">
         <p>
           Money: <span className="font-bold text-green-400">${money}</span>
@@ -272,6 +288,7 @@ const BossesPage = () => {
       </div>
 
       <div className="mt-6">
+        <p className='py-2 text-red-500'>One bullet = 100$</p>
         <label htmlFor="bullets" className="block text-xl font-semibold mb-2 text-gray-300">
           Bullets to use:
         </label>

@@ -1,3 +1,5 @@
+// controllers/userController.js
+
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -33,14 +35,16 @@ exports.registerUser = async (req, res) => {
 
     await newUser.save();
 
-    const token = jwt.sign({ userId: newUser._id }, process.env.TOKEN_SECRET, { expiresIn: '24h' });
+    // Convert ObjectId to string when generating token
+    const token = jwt.sign({ userId: newUser._id.toString() }, process.env.TOKEN_SECRET, { expiresIn: '24h' });
 
     res.status(201).json({
       success: true,
       token,
       userData: {
+        userId: newUser._id.toString(),
         username: newUser.username,
-        password, // Include password in response for display
+        // Consider not sending the password back to the client
         message: 'User registered successfully',
       },
     });
@@ -49,6 +53,7 @@ exports.registerUser = async (req, res) => {
     res.status(500).json({ message: 'Failed to register user' });
   }
 };
+
 exports.loginUser = async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -63,7 +68,8 @@ exports.loginUser = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ userId: user._id }, process.env.TOKEN_SECRET, {
+    // Convert ObjectId to string when generating token
+    const token = jwt.sign({ userId: user._id.toString() }, process.env.TOKEN_SECRET, {
       expiresIn: '1h',
     });
 
@@ -71,7 +77,7 @@ exports.loginUser = async (req, res) => {
       success: true,
       token,
       userData: {
-        _id: user._id,
+        userId: user._id.toString(),
         username: user.username,
         money: user.money,
         cars: user.cars,
@@ -89,32 +95,34 @@ exports.loginUser = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to login user' });
   }
 };
+
 exports.getUserData = async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).select('-password'); // Exclude password
+    const userId = req.user.userId; // Access userId from req.user
+    const user = await User.findById(userId).select('-password'); // Exclude password
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
     // Calculate the rank and next rank details
-    const rankInfo = getRankForXp(user.xp); // Ensure this function is correctly implemented
+    const rankInfo = getRankForXp(user.xp);
 
     res.json({
       success: true,
       userData: {
-        _id: user._id,
+        userId: user._id.toString(),
         username: user.username,
         money: user.money,
         cars: user.cars,
         stolenItems: user.stolenItems,
         inventory: user.inventory,
         bossItems: user.bossItems,
-        xp: user.xp, 
-        rank: rankInfo.currentRank, 
-        nextRank: rankInfo.nextRank, 
-        nextRankThreshold: rankInfo.nextRankThreshold, 
-        currentRankThreshold: rankInfo.currentRankThreshold, 
-        isAlive: user.isAlive, 
+        xp: user.xp,
+        rank: rankInfo.currentRank,
+        nextRank: rankInfo.nextRank,
+        nextRankThreshold: rankInfo.nextRankThreshold,
+        currentRankThreshold: rankInfo.currentRankThreshold,
+        isAlive: user.isAlive,
         kills: user.kills,
       },
     });
@@ -123,13 +131,14 @@ exports.getUserData = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to fetch user data' });
   }
 };
+
 exports.updateUserData = async (req, res) => {
   try {
     const userId = req.user.userId;
     const updatedData = req.body;
 
     // Validate and sanitize updatedData as needed
-    const allowedUpdates = ['money', 'inJail', 'jailTimeEnd', 'xp', 'rank'];
+    const allowedUpdates = ['money', 'inJail', 'jailTimeEnd', 'xp', 'rank', 'isAlive', 'kills', 'cars', 'stolenItems', 'inventory', 'bossItems'];
     const updates = {};
 
     allowedUpdates.forEach((field) => {
@@ -150,9 +159,11 @@ exports.updateUserData = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to update user data', error: error.message });
   }
 };
+
 exports.getUserProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).select('-password'); // Exclude password
+    const userId = req.user.userId;
+    const user = await User.findById(userId).select('-password');
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found.' });
     }
@@ -163,20 +174,20 @@ exports.getUserProfile = async (req, res) => {
     res.json({
       success: true,
       userData: {
-        _id: user._id,
+        userId: user._id.toString(),
         username: user.username,
         money: user.money,
         cars: user.cars,
         stolenItems: user.stolenItems,
         inventory: user.inventory,
         bossItems: user.bossItems,
-        xp: user.xp, // Current XP
-        rank: rankInfo.currentRank, // Current rank
-        kills: user.kills, 
-        nextRank: rankInfo.nextRank, // Next rank
-        nextRankThreshold: rankInfo.nextRankThreshold, // XP needed for next rank
-        currentRankThreshold: rankInfo.currentRankThreshold, // XP threshold for current rank
-        isAlive: user.isAlive, // Include isAlive
+        xp: user.xp,
+        rank: rankInfo.currentRank,
+        kills: user.kills,
+        nextRank: rankInfo.nextRank,
+        nextRankThreshold: rankInfo.nextRankThreshold,
+        currentRankThreshold: rankInfo.currentRankThreshold,
+        isAlive: user.isAlive,
       },
     });
   } catch (error) {
@@ -184,15 +195,17 @@ exports.getUserProfile = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to fetch user data' });
   }
 };
+
 exports.startJailTime = async (user, jailDurationInSeconds) => {
   user.inJail = true;
   const jailTimeEnd = Date.now() + jailDurationInSeconds * 1000; // Store the future release time in milliseconds
   user.jailTimeEnd = jailTimeEnd;
   await user.save();
 };
+
 exports.getJailTime = async (req, res) => {
   try {
-    const { userId } = req.user;
+    const userId = req.user.userId;
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
@@ -201,7 +214,7 @@ exports.getJailTime = async (req, res) => {
       return res.status(200).json({ inJail: false, message: 'User is not in jail' });
     }
 
-    const jailTimeLeft = Math.max(0, user.jailTimeEnd.getTime() - Date.now());
+    const jailTimeLeft = Math.max(0, user.jailTimeEnd - Date.now());
     if (jailTimeLeft > 0) {
       return res.status(200).json({
         inJail: true,
@@ -222,6 +235,7 @@ exports.getJailTime = async (req, res) => {
     });
   }
 };
+
 exports.updateMoney = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -242,6 +256,7 @@ exports.updateMoney = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error updating money' });
   }
 };
+
 exports.getTargets = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -253,11 +268,13 @@ exports.getTargets = async (req, res) => {
     res.status(500).json({ success: false, message: 'Error fetching targets' });
   }
 };
+
 exports.updateBossItems = async (req, res) => {
   const { bossItems } = req.body;
 
   try {
-    const user = await User.findById(req.user.userId);
+    const userId = req.user.userId;
+    const user = await User.findById(userId);
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -273,5 +290,25 @@ exports.updateBossItems = async (req, res) => {
   } catch (error) {
     console.error('Error updating boss items:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+exports.updateXP = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { xp } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    user.xp = xp;
+    // Optionally update rank based on XP
+    user.rank = getRankForXp(xp).currentRank;
+
+    await user.save();
+    res.status(200).json({ message: 'XP updated successfully', xp: user.xp, rank: user.rank });
+  } catch (error) {
+    console.error('Error updating XP:', error);
+    res.status(500).json({ message: 'Server error updating XP' });
   }
 };

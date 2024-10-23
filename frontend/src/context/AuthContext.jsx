@@ -146,7 +146,7 @@ export const AuthProvider = ({ children }) => {
 
   // Handle updating user data and refreshing the user state
   const updateUserData = async (updatedData) => {
-    if (!user || !user._id) {
+    if (!user || !user.userId) {
       console.error('Cannot update user data: User is not logged in or missing _id');
       return;
     }

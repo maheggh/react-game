@@ -1,49 +1,61 @@
-// components/AssassinationPage.jsx
-
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 
 const AssassinationPage = () => {
-  const { 
-    user, 
-    money, 
-    cars, 
-    updateUserData, 
-    isAlive, 
-    setIsAlive, 
-    kills, // Access kills directly from context
-    setKills, // Optionally, if you need to set kills directly
-  } = useContext(AuthContext);
-  
+  const { user, money, updateUserData, isAlive, setIsAlive, kills } = useContext(AuthContext);
+
   const [targets, setTargets] = useState([]);
   const [selectedTarget, setSelectedTarget] = useState(null);
   const [weapons, setWeapons] = useState([]);
   const [selectedWeapon, setSelectedWeapon] = useState(null);
+  const [bossItems, setBossItems] = useState([]);
+  const [selectedBossItem, setSelectedBossItem] = useState(null);
   const [resultMessage, setResultMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [scenarioImage, setScenarioImage] = useState('');
-  const [cooldown, setCooldown] = useState(null); 
+  const [cooldown, setCooldown] = useState(null);
+  const [bulletsUsed, setBulletsUsed] = useState(1);
 
-  const COOLDOWN_TIME = 30 * 60 * 1000; // 30 minutes
+  const COOLDOWN_TIME = 1 * 1 * 1;
 
-  // Fetch user stats and weapons on mount
+  const bossItemStats = {
+    'Presidential Medal': {
+      description: 'Increases XP gain by 30% and increases assassination success by 40%. You receive 75% of your opponent\'s money.',
+    },
+    "Dragon's Hoard": {
+      description: 'Receive 100% of your opponent\'s money.',
+    },
+    'Mafia Ring': {
+      description: 'Increases assassination success rate by 300% but makes you ten times as vulnerable to retaliation.',
+    },
+    'Invisible Cloak': {
+      description: 'Makes you immune to retaliation and allows you to use bullets for free.',
+    },
+    "Pirate's Compass": {
+      description: 'Grants 75% of your opponent\'s money.',
+    },
+    'Golden Spatula': {
+      description: 'Increases XP gain by 200%.',
+    },
+    'Star Dust': {
+      description: 'Grants an additional 3000 XP upon a successful assassination.',
+    },
+    "Sheriff's Badge": {
+      description: 'Reduces the target’s chance to retaliate by 50% and increases assassination success rate by 10%.',
+    },
+  };
+
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         const response = await fetch('/api/users/profile', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         });
         const data = await response.json();
         if (data.success) {
-          // No need to set kills here since it's managed by AuthContext
-          setWeapons(
-            data.userData.inventory.filter(
-              (item) => item.attributes && item.attributes.accuracy
-            )
-          );
+          setWeapons(data.userData.inventory.filter((item) => item.attributes && item.attributes.accuracy));
+          setBossItems(data.userData.bossItems || []);
           setIsAlive(data.userData.isAlive);
         } else {
           setErrorMessage(data.message || 'Failed to fetch user data.');
@@ -56,14 +68,11 @@ const AssassinationPage = () => {
     fetchUserData();
   }, [setIsAlive]);
 
-  // Fetch targets
   useEffect(() => {
     const fetchTargets = async () => {
       try {
         const response = await fetch('/api/users/targets', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         });
 
         if (response.ok) {
@@ -80,7 +89,6 @@ const AssassinationPage = () => {
     fetchTargets();
   }, []);
 
-  // Check cooldown status
   useEffect(() => {
     const lastAttempt = localStorage.getItem('lastAssassinationAttempt');
     if (lastAttempt) {
@@ -95,44 +103,29 @@ const AssassinationPage = () => {
     }
   }, []);
 
-  // Function to calculate random outcome
-  const calculateOutcome = (accuracy) => {
-    const randomFactor = Math.random();
-    return randomFactor < accuracy / 100; // success if randomFactor is within accuracy range
-  };
-
-  // Function to attempt assassination
   const attemptAssassination = async () => {
     setResultMessage('');
     setErrorMessage('');
     setIsLoading(true);
-  
+
     if (cooldown > 0) {
       setErrorMessage(`Please wait ${Math.ceil(cooldown / 60000)} minutes before your next attempt.`);
       setIsLoading(false);
       return;
     }
-  
-    if (!selectedTarget) {
-      setErrorMessage('You must select a target.');
+
+    if (!selectedTarget || !selectedWeapon) {
+      setErrorMessage('You must select a target and a weapon.');
       setIsLoading(false);
       return;
     }
-  
-    if (!selectedWeapon) {
-      setErrorMessage('You must select a weapon.');
+
+    if (bulletsUsed < 1 || bulletsUsed > 1000) {
+      setErrorMessage('Bullets used must be between 1 and 1000.');
       setIsLoading(false);
       return;
     }
-  
-    if (money < 50000) {
-      setErrorMessage('Not enough money. Assassination costs $50,000.');
-      setIsLoading(false);
-      return;
-    }
-  
-    const success = calculateOutcome(selectedWeapon.attributes.accuracy);
-  
+
     try {
       const response = await fetch('/api/assassinate', {
         method: 'POST',
@@ -143,35 +136,27 @@ const AssassinationPage = () => {
         body: JSON.stringify({
           targetId: selectedTarget._id,
           weaponName: selectedWeapon.name,
+          bossItemName: selectedBossItem?.name || null,
+          bulletsUsed,
         }),
       });
-  
+
       const data = await response.json();
-  
+
       if (response.ok && data.success) {
-        const newMoney = money - 50000 + (data.lootMoney || 0);
-  
-        // Ensure 'cars' is always an array
-        const newCars = [...(cars || []), ...(data.lootCars || [])]; // If 'cars' or 'lootCars' is undefined, default to an empty array
-        const newInventory = [...(user.inventory || []), ...(data.lootInventory || [])]; // Same check for inventory
-  
-        // Update the user data with new money, cars, inventory, and kills
-        updateUserData({ money: newMoney, cars: newCars, inventory: newInventory, kills: data.updatedKills });
-  
-        // setKills is handled by AuthContext, no need to set it here
-        setResultMessage(success ? `You assassinated ${selectedTarget.username} and looted all their possessions!` : 'Assassination failed, try again.');
-        setScenarioImage(success ? '/assets/success.png' : '/assets/failure.png');
+        const newMoney = money - data.actualBulletCost + (data.lootMoney || 0);
+        updateUserData({ money: newMoney, kills: data.updatedKills });
+
+        setResultMessage(data.message);
+        setScenarioImage('/assets/success.png');
         localStorage.setItem('lastAssassinationAttempt', new Date());
         setCooldown(COOLDOWN_TIME);
-  
-        if (data.userDied) {
-          setIsAlive(false);
-        }
       } else {
         setErrorMessage(data.message || 'Assassination attempt failed.');
         setScenarioImage('/assets/failure.png');
+
         if (data.userDied) {
-          setIsAlive(false); 
+          setIsAlive(false);
         }
       }
     } catch (error) {
@@ -182,21 +167,14 @@ const AssassinationPage = () => {
       setIsLoading(false);
     }
   };
-  
+
   return (
-    <div className="container mx-auto p-4 text-white min-h-screen bg-gray-900 pt-20 pb-40 mt-8">
+    <div className="mx-auto p-4 text-white min-h-screen bg-gray-900 pt-20 pb-40 mt-8">
       <h1 className="text-4xl font-bold mb-8 text-center text-red-700">Assassination Mission</h1>
-
-      {/* Error Message */}
       {errorMessage && <p className="text-red-500 text-center mb-4">{errorMessage}</p>}
-      
-      <h1 className='text-left p-4 text-lg'>
-        Welcome to the potato underworld, where you can 'tactfully eliminate' other unsuspecting spuds. 
-        But beware! Not every potato goes down without a fight—some have eyes on the back of their heads and might fry you instead. 
-        Proceed with caution, or you might just be the one mashed!
+      <h1 className="text-left p-4 text-lg">
+        Welcome to the potato underworld, where you can 'tactfully eliminate' other unsuspecting spuds.
       </h1>
-
-      {/* Display the user's current kills */}
       <div className="text-center mb-4">
         <p className="text-xl">
           Your Assassination Count: <span className="font-bold text-green-400">{kills}</span>
@@ -208,85 +186,103 @@ const AssassinationPage = () => {
         <div className="p-4 bg-gray-800 rounded-lg shadow-lg">
           <h2 className="text-xl font-semibold mb-2 text-gray-200">Select Target</h2>
           <select
-            id="target-select"
             value={selectedTarget ? selectedTarget._id : ''}
             onChange={(e) => {
               const target = targets.find((t) => t._id === e.target.value);
-              setSelectedTarget(target);
+              if (selectedTarget && selectedTarget._id === e.target.value) {
+                setSelectedTarget(null);
+              } else {
+                setSelectedTarget(target);
+              }
             }}
             className="border border-gray-600 rounded px-3 py-2 w-full bg-gray-700 text-white"
           >
-            <option value="" disabled>
-              Choose a target
-            </option>
-            {targets.length > 0 ? (
-              targets.map((target) => (
-                <option key={target._id} value={target._id}>
-                  {target.username} (Level {target.level})
-                </option>
-              ))
-            ) : (
-              <option value="" disabled>No targets available</option>
-            )}
+            <option value="">Choose a target</option>
+            {targets.map((target) => (
+              <option key={target._id} value={target._id}>
+                {target.username}
+              </option>
+            ))}
           </select>
         </div>
 
         {/* Weapon Selection */}
         <div className="p-4 bg-gray-800 rounded-lg shadow-lg">
           <h2 className="text-xl font-semibold mb-2 text-gray-200">Select Weapon</h2>
-          <select
-            id="weapon-select"
-            value={selectedWeapon ? selectedWeapon.name : ''}
-            onChange={(e) => {
-              const weapon = weapons.find((w) => w.name === e.target.value);
-              setSelectedWeapon(weapon);
-            }}
-            className="border border-gray-600 rounded px-3 py-2 w-full bg-gray-700 text-white"
-          >
-            <option value="" disabled>
-              Choose a weapon
-            </option>
-            {weapons.length > 0 ? (
-              weapons.map((weapon) => (
-                <option key={weapon.name} value={weapon.name}>
-                  {weapon.name} - Accuracy: {weapon.attributes.accuracy}%
-                </option>
-              ))
-            ) : (
-              <option value="" disabled>No weapons available</option>
-            )}
-          </select>
+          <div className="flex flex-wrap">
+            {weapons.map((weapon, index) => (
+              <div
+                key={`${weapon.name}-${index}`}
+                onClick={() => {
+                  if (selectedWeapon && selectedWeapon.name === weapon.name) {
+                    setSelectedWeapon(null);
+                  } else {
+                    setSelectedWeapon(weapon);
+                  }
+                }}
+                className={`border border-gray-600 rounded px-3 py-2 m-1 cursor-pointer ${
+                  selectedWeapon && selectedWeapon.name === weapon.name ? 'bg-gray-600' : 'bg-gray-700'
+                }`}
+              >
+                {weapon.name} - Accuracy: {weapon.attributes.accuracy}%
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Boss Item Selection */}
+        <div className="p-4 bg-gray-800 rounded-lg shadow-lg">
+          <h2 className="text-xl font-semibold mb-2 text-gray-200">Select Boss Item (Optional)</h2>
+          <div className="flex flex-wrap">
+            {bossItems.map((item, index) => (
+              <div
+                key={`${item.name}-${index}`}
+                onClick={() => {
+                  if (selectedBossItem && selectedBossItem.name === item.name) {
+                    setSelectedBossItem(null);
+                  } else {
+                    setSelectedBossItem(item);
+                  }
+                }}
+                className={`border border-gray-600 rounded px-3 py-2 m-1 cursor-pointer ${
+                  selectedBossItem && selectedBossItem.name === item.name ? 'bg-gray-600' : 'bg-gray-700'
+                }`}
+              >
+                {item.name}
+              </div>
+            ))}
+          </div>
+
+          {selectedBossItem && (
+            <p className="text-gray-400 mt-2">
+              {bossItemStats[selectedBossItem.name]?.description || 'No special stats'}
+            </p>
+          )}
+        </div>
+
+        {/* Bullets Input */}
+        <div className="p-4 bg-gray-800 rounded-lg shadow-lg">
+          <h2 className="text-xl font-semibold mb-2 text-gray-200">Bullets to Use</h2>
+          <input
+            type="number"
+            value={bulletsUsed}
+            onChange={(e) => setBulletsUsed(Number(e.target.value))}
+            className="w-full p-2 border border-gray-700 rounded-md bg-gray-700 text-white"
+            min="1"
+            max="1000"
+          />
         </div>
       </div>
 
-      {/* Result Message */}
-      {resultMessage && (
-        <p className="text-green-400 text-center text-lg mb-4 p-3 bg-gray-700 rounded-md">
-          {resultMessage}
-        </p>
-      )}
-
-      {/* Display Scenario Image */}
+      {resultMessage && <p className="text-green-400 text-center text-lg mb-4 p-3 bg-gray-700 rounded-md">{resultMessage}</p>}
       {scenarioImage && (
         <div className="flex justify-center mb-6">
-          <img 
-            src={scenarioImage} 
-            alt="Assassination Scenario" 
-            className="w-1/2 h-auto rounded-md shadow-md" 
-            loading="lazy" // Added lazy loading
-            onError={(e) => { e.target.src = '/assets/default-category.png'; }} // Fallback image
-          />
+          <img src={scenarioImage} alt="Assassination Scenario" className="w-1/2 h-auto rounded-md shadow-md" />
         </div>
       )}
 
-      {/* Cooldown Timer */}
-      {cooldown > 0 && (
-        <p className="text-center text-red-500 mb-4">
-          Next attempt available in: {Math.floor(cooldown / 60000)} minutes
-        </p>
-      )}
+      {cooldown > 0 && <p className="text-center text-red-500 mb-4">Next attempt available in: {Math.floor(cooldown / 60000)} minutes</p>}
 
-      {/* Assassination Button */}
       <div className="flex justify-center">
         <button
           onClick={attemptAssassination}

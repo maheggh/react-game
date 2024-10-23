@@ -224,7 +224,10 @@ const CarTheft = () => {
   return (
     <div className="container mx-auto p-6 mb-40 bg-white rounded-lg shadow-md">
       <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">Car Theft</h2>
-
+      <p className="text-gray-500 mt-2 p-4 text-lg">
+          Why steal a car when you can't even drive ? <br/>
+          The rich have some nice cars, but also very good alarmsystems
+        </p>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {Object.keys(venues).map((venueName, index) => {
           const venue = venues[venueName];

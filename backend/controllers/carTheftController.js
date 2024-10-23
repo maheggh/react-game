@@ -105,7 +105,7 @@ exports.stealCar = async (req, res) => {
       user.cars.push(car);
 
       // Increase user's XP and update rank
-      const xpGained = 50; // Adjust XP as needed
+      const xpGained = 200; // Adjust XP as needed
       user.xp += xpGained;
       const rankInfo = getRankForXp(user.xp);
       user.rank = rankInfo.currentRank;

@@ -1,14 +1,14 @@
-// controllers/assassinationController.js
-
 const User = require('../models/User');
-const { getRankForXp, xpThresholds } = require('../utils/rankCalculator');
+const { getRankForXp } = require('../utils/rankCalculator');
 
 exports.attemptAssassination = async (req, res) => {
   try {
     const attackerId = req.user.userId;
-    const { targetId, weaponName } = req.body;
+    const { targetId, weaponName, bossItemName, bulletsUsed } = req.body;
 
-    // Fetch attacker and target data
+    const bulletCostPerShot = 100;
+    let totalBulletCost = bulletCostPerShot * bulletsUsed;
+
     const attacker = await User.findById(attackerId);
     const target = await User.findById(targetId);
 
@@ -16,150 +16,187 @@ exports.attemptAssassination = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found.' });
     }
 
-    // Prevent attacking oneself
     if (attackerId === targetId) {
       return res.status(400).json({ success: false, message: 'You cannot attack yourself.' });
     }
 
-    // Check if attacker is alive
     if (!attacker.isAlive) {
       return res.status(400).json({ success: false, message: 'You are dead and cannot attack.' });
     }
 
-    // Check if target is alive
     if (!target.isAlive) {
       return res.status(400).json({ success: false, message: 'Target is already dead.' });
     }
 
-    // Check if attacker has the weapon
-    const weapon = attacker.inventory.find((item) => item.name === weaponName);
-
-    if (!weapon || !weapon.attributes.accuracy) {
+    const weapon = attacker.inventory.find((item) => item.name === weaponName && item.attributes?.accuracy);
+    if (!weapon) {
       return res.status(400).json({ success: false, message: 'Weapon not found in inventory.' });
     }
 
-    const successChance = calculateSuccessChance(attacker, target, weapon);
+    const bossItem = attacker.bossItems.find((item) => item.name === bossItemName);
+
+    if (bossItem && bossItem.name === 'Invisible Cloak') {
+      totalBulletCost = 0;
+    }
+
+    if (attacker.money < totalBulletCost) {
+      return res.status(400).json({ success: false, message: 'Not enough money for bullets.' });
+    }
+
+    attacker.money -= totalBulletCost;
+
+    const attackerRankInfo = getRankForXp(attacker.xp);
+    const targetRankInfo = getRankForXp(target.xp);
+
+    let successChance = calculateSuccessChance(attacker, target, weapon, bossItem, bulletsUsed, attackerRankInfo, targetRankInfo);
+    successChance = Math.min(successChance, 0.95);
 
     if (Math.random() < successChance) {
-      // Successful assassination
-      attacker.kills += 1; // Increment kills
-      await attacker.save(); // Save the attacker with updated kills
+      const lootMultiplier = calculateLootMultiplier(bossItem);
 
-      // Transfer all target's money, cars, weapons, and inventory to the attacker
-      transferAssets(attacker, target);
+      attacker.kills += 1;
 
-      // Kill the target
-      target.isAlive = false;
+      const lootMoney = (target.money || 0) * lootMultiplier;
+      attacker.money += lootMoney;
+      target.money -= lootMoney;
+
+      const xpGained = calculateXpReward(attacker, bossItem, target);
+      attacker.xp += xpGained;
+      attacker.rank = getRankForXp(attacker.xp).currentRank;
+
+      if (bossItem) {
+        const index = attacker.bossItems.findIndex((item) => item.name === bossItemName);
+        if (index !== -1) {
+          attacker.bossItems.splice(index, 1);
+          attacker.markModified('bossItems');
+        }
+      }
+
+      await attacker.save();
       await target.save();
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
-        message: `You have successfully assassinated ${target.username} and looted all their possessions!`,
-        updatedKills: attacker.kills, // Return updated kills
-        lootMoney: target.money, // Assuming all target's money is looted
-        lootCars: target.cars, // Assuming all target's cars are looted
-        lootInventory: target.inventory, // Assuming all target's inventory is looted
+        message: `You successfully assassinated ${target.username}!`,
+        lootMoney,
+        updatedKills: attacker.kills,
+        xpGained,
+        actualBulletCost: totalBulletCost,
       });
     } else {
-      // Failed attempt, possible retaliation
-      const retaliationChance = calculateRetaliationChance(attacker, target);
+      const retaliationChance = calculateRetaliationChance(attacker, target, bossItem);
 
       if (Math.random() < retaliationChance) {
-        // Attacker is killed
         attacker.isAlive = false;
         await attacker.save();
 
-        res.status(200).json({
-          success: true,
-          message: `Your assassination attempt failed, and you were killed by ${target.username}!`,
-          userDied: true, // Flag indicating the attacker is dead
+        return res.status(200).json({
+          success: false,
+          message: `Assassination failed and you were killed by ${target.username}!`,
+          userDied: true,
         });
       } else {
-        res.status(200).json({
-          success: true,
-          message: `Your assassination attempt on ${target.username} failed.`,
+        return res.status(200).json({
+          success: false,
+          message: `Assassination attempt on ${target.username} failed.`,
         });
       }
     }
   } catch (error) {
-    console.error('Error during assassination attempt:', error);
-    res.status(500).json({ success: false, message: 'Server error during assassination attempt.' });
+    console.error('Error during assassination:', error);
+    return res.status(500).json({ success: false, message: 'Server error during assassination.' });
   }
 };
 
-const calculateSuccessChance = (attacker, target, weapon) => {
-  const baseChance = 0.1; 
+const calculateSuccessChance = (
+  attacker,
+  target,
+  weapon,
+  bossItem,
+  bulletsUsed,
+  attackerRankInfo,
+  targetRankInfo
+) => {
+  let baseSuccessChance = weapon.attributes.accuracy / 100;
+  let bulletEffect = Math.log10(bulletsUsed + 1) / 2; 
+  baseSuccessChance *= bulletEffect;
+  const rankDifference = attackerRankInfo.rankLevel - targetRankInfo.rankLevel;
+  const rankEffect = 0.05 * rankDifference;
+  baseSuccessChance += rankEffect;
 
-  const attackerRankData = getRankForXp(attacker.xp);
-  const targetRankData = getRankForXp(target.xp);
-
-  const attackerRankValue = getRankValue(attackerRankData.currentRank);
-  const targetRankValue = getRankValue(targetRankData.currentRank);
-
-  const attackerLevel = attacker.level || 1;
-  const targetLevel = target.level || 1;
-  const weaponAccuracy = weapon.attributes.accuracy || 0;
-
-  const rankFactor = 0.02; 
-  const levelFactor = 0.01; 
-  const weaponFactor = 0.005; 
-
-  const rankDifference = attackerRankValue - targetRankValue;
-  const levelDifference = attackerLevel - targetLevel;
-
-  let successChance = baseChance
-    + (rankDifference * rankFactor)
-    + (levelDifference * levelFactor)
-    + (weaponAccuracy * weaponFactor);
-
-  // Adjust success chance
-  successChance = Math.max(0.05, Math.min(successChance, 0.9)); // Clamp between 5% and 90%
-
-  return successChance;
-};
-
-const getRankValue = (rank) => {
-  const ranks = Object.keys(xpThresholds);
-  const rankIndex = ranks.indexOf(rank);
-  return rankIndex !== -1 ? rankIndex + 1 : 1; // +1 to avoid zero
-};
-
-const calculateRetaliationChance = (attacker, target) => {
-  const attackerLevel = attacker.level || 1;
-  const targetLevel = target.level || 1;
-  const levelDifference = targetLevel - attackerLevel;
-  const baseRetaliationChance = 0.1;
-  const levelFactor = 0.02; 
-
-  let retaliationChance = baseRetaliationChance + (levelDifference * levelFactor);
-
-  retaliationChance = Math.max(0.05, Math.min(retaliationChance, 0.8)); 
-
-  return retaliationChance;
-};
-
-// Transfer assets from target to attacker
-const transferAssets = (attacker, target) => {
-  // Transfer money
-  attacker.money += target.money;
-  target.money = 0;
-
-  // Transfer cars
-  if (target.cars && target.cars.length > 0) {
-    attacker.cars = [...attacker.cars, ...target.cars];
-    target.cars = [];
+  if (bossItem) {
+    switch (bossItem.name) {
+      case 'Presidential Medal':
+        baseSuccessChance += 0.4;
+        break;
+      case 'Mafia Ring':
+        baseSuccessChance *= 4;
+        break;
+      case "Sheriff's Badge":
+        baseSuccessChance += 0.1;
+        break;
+    }
   }
 
-  // Transfer inventory (weapons, items, loot)
-  if (target.inventory && target.inventory.length > 0) {
-    target.inventory.forEach((item) => {
-      const existingItem = attacker.inventory.find((invItem) => invItem.name === item.name);
-      if (existingItem) {
-        existingItem.quantity += item.quantity; // Increment existing item quantity
-      } else {
-        attacker.inventory.push(item); // Add new item to attacker's inventory
-      }
-    });
-    target.inventory = [];
+  return Math.min(baseSuccessChance, 0.95); 
+};
+
+
+const calculateRetaliationChance = (attacker, target, bossItem) => {
+  let retaliationChance = 0.05;
+
+  if (bossItem) {
+    switch (bossItem.name) {
+      case 'Mafia Ring':
+        retaliationChance *= 10;
+        break;
+      case 'Invisible Cloak':
+        retaliationChance = 0;
+        break;
+      case "Sheriff's Badge":
+        retaliationChance -= 0.5 * retaliationChance;
+        break;
+    }
   }
+
+  return Math.max(retaliationChance, 0);
+};
+
+const calculateLootMultiplier = (bossItem) => {
+  let lootMultiplier = 0.5;
+
+  if (bossItem) {
+    switch (bossItem.name) {
+      case 'Presidential Medal':
+      case 'Mafia Ring':
+      case "Pirate's Compass":
+        lootMultiplier = 0.75;
+        break;
+      case "Dragon's Hoard":
+        lootMultiplier = 1;
+        break;
+    }
+  }
+
+  return lootMultiplier;
+};
+
+const calculateXpReward = (attacker, bossItem, target) => {
+  let baseXp = 100;
+
+  if (bossItem) {
+    switch (bossItem.name) {
+      case 'Presidential Medal':
+        baseXp += baseXp * 0.3;
+        break;
+      case 'Golden Spatula':
+        baseXp += baseXp * 2;
+        break;
+      case 'Star Dust':
+        baseXp += 3000;
+        break;
+    }
+  }
+
+  return baseXp;
 };

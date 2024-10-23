@@ -65,9 +65,6 @@ const ScorePage = () => {
               <th className="px-4 py-2" onClick={() => handleSort('money')}>
                 Money {sortField === 'money' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
               </th>
-              <th className="px-4 py-2" onClick={() => handleSort('bossItems')}>
-                Boss Items {sortField === 'bossItems' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
-              </th>
               <th className="px-4 py-2" onClick={() => handleSort('status')}>
                 Status {sortField === 'status' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
               </th>
@@ -80,7 +77,6 @@ const ScorePage = () => {
                 <td className="border px-4 py-2">{player.kills}</td>
                 <td className="border px-4 py-2">{player.rank}</td>
                 <td className="border px-4 py-2">${player.money.toLocaleString()}</td>
-                <td className="border px-4 py-2">{player.bossItems.length}</td>
                 <td className={`border px-4 py-2 ${player.isAlive ? 'text-green-500' : 'text-red-500'}`}>
                   {player.isAlive ? 'Alive' : 'Dead'}
                 </td>
