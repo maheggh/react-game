@@ -62,3 +62,15 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+const rateLimit = require('express-rate-limit');
+
+// Define rate limiting rules
+const registrationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 registration requests per windowMs
+  message: { success: false, message: 'Too many accounts created from this IP, please try again later.' },
+});
+
+// Apply the rate limiter to your registration route
+app.use('/api/users/register', registrationLimiter);
