@@ -6,6 +6,6 @@ const assassinationController = require('../controllers/assassinationController'
 const authMiddleware = require('../middleware/authMiddleware');
 
 // Route to attempt an assassination
-router.post('/', authMiddleware, assassinationController.attemptAssassination);
+router.post('/attempt', authMiddleware, assassinationController.attemptAssassination);
 
 module.exports = router;

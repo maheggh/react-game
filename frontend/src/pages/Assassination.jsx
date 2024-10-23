@@ -1,3 +1,5 @@
+// components/AssassinationPage.jsx
+
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 
@@ -14,26 +16,28 @@ const AssassinationPage = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [scenarioImage, setScenarioImage] = useState('');
-  const [cooldown, setCooldown] = useState(null);
+  const [cooldown, setCooldown] = useState(0);
   const [bulletsUsed, setBulletsUsed] = useState(1);
 
-  const COOLDOWN_TIME = 1 * 1 * 1;
+  const COOLDOWN_TIME = 1 * 60 * 1000; // 1 minute in milliseconds
 
   const bossItemStats = {
     'Presidential Medal': {
-      description: 'Increases XP gain by 30% and increases assassination success by 40%. You receive 75% of your opponent\'s money.',
+      description:
+        "Increases XP gain by 30% and increases assassination success by 40%. You receive 75% of your opponent's money.",
     },
     "Dragon's Hoard": {
-      description: 'Receive 100% of your opponent\'s money.',
+      description: "Receive 100% of your opponent's money.",
     },
     'Mafia Ring': {
-      description: 'Increases assassination success rate by 300% but makes you ten times as vulnerable to retaliation.',
+      description:
+        'Increases assassination success rate by 300% but makes you ten times as vulnerable to retaliation.',
     },
     'Invisible Cloak': {
       description: 'Makes you immune to retaliation and allows you to use bullets for free.',
     },
     "Pirate's Compass": {
-      description: 'Grants 75% of your opponent\'s money.',
+      description: "Grants 75% of your opponent's money.",
     },
     'Golden Spatula': {
       description: 'Increases XP gain by 200%.',
@@ -42,7 +46,8 @@ const AssassinationPage = () => {
       description: 'Grants an additional 3000 XP upon a successful assassination.',
     },
     "Sheriff's Badge": {
-      description: 'Reduces the target’s chance to retaliate by 50% and increases assassination success rate by 10%.',
+      description:
+        'Reduces the target’s chance to retaliate by 50% and increases assassination success rate by 10%.',
     },
   };
 
@@ -92,11 +97,18 @@ const AssassinationPage = () => {
   useEffect(() => {
     const lastAttempt = localStorage.getItem('lastAssassinationAttempt');
     if (lastAttempt) {
-      const remainingTime = COOLDOWN_TIME - (Date.now() - new Date(lastAttempt));
-      if (remainingTime > 0) {
-        setCooldown(remainingTime);
+      const timeSinceLastAttempt = Date.now() - new Date(lastAttempt).getTime();
+      const remainingCooldown = COOLDOWN_TIME - timeSinceLastAttempt;
+      if (remainingCooldown > 0) {
+        setCooldown(remainingCooldown);
         const interval = setInterval(() => {
-          setCooldown((prev) => (prev > 1000 ? prev - 1000 : 0));
+          setCooldown((prev) => {
+            if (prev <= 1000) {
+              clearInterval(interval);
+              return 0;
+            }
+            return prev - 1000;
+          });
         }, 1000);
         return () => clearInterval(interval);
       }
@@ -127,7 +139,7 @@ const AssassinationPage = () => {
     }
 
     try {
-      const response = await fetch('/api/assassinate', {
+      const response = await fetch('/api/assassination/attempt', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -137,7 +149,7 @@ const AssassinationPage = () => {
           targetId: selectedTarget._id,
           weaponName: selectedWeapon.name,
           bossItemName: selectedBossItem?.name || null,
-          bulletsUsed,
+          bulletsUsed: bulletsUsed,
         }),
       });
 
@@ -189,11 +201,7 @@ const AssassinationPage = () => {
             value={selectedTarget ? selectedTarget._id : ''}
             onChange={(e) => {
               const target = targets.find((t) => t._id === e.target.value);
-              if (selectedTarget && selectedTarget._id === e.target.value) {
-                setSelectedTarget(null);
-              } else {
-                setSelectedTarget(target);
-              }
+              setSelectedTarget(target || null);
             }}
             className="border border-gray-600 rounded px-3 py-2 w-full bg-gray-700 text-white"
           >
@@ -274,14 +282,22 @@ const AssassinationPage = () => {
         </div>
       </div>
 
-      {resultMessage && <p className="text-green-400 text-center text-lg mb-4 p-3 bg-gray-700 rounded-md">{resultMessage}</p>}
+      {resultMessage && (
+        <p className="text-green-400 text-center text-lg mb-4 p-3 bg-gray-700 rounded-md">
+          {resultMessage}
+        </p>
+      )}
       {scenarioImage && (
         <div className="flex justify-center mb-6">
           <img src={scenarioImage} alt="Assassination Scenario" className="w-1/2 h-auto rounded-md shadow-md" />
         </div>
       )}
 
-      {cooldown > 0 && <p className="text-center text-red-500 mb-4">Next attempt available in: {Math.floor(cooldown / 60000)} minutes</p>}
+      {cooldown > 0 && (
+        <p className="text-center text-red-500 mb-4">
+          Next attempt available in: {Math.ceil(cooldown / 60000)} minutes
+        </p>
+      )}
 
       <div className="flex justify-center">
         <button

@@ -1,62 +1,58 @@
 // utils/rankCalculator.js
 
-// XP thresholds for each rank
-const xpThresholds = {
-  'Homeless Potato': 0,
-  'Potato Peeler': 1000,
-  'Mashed Potato': 2500,
-  'Baked Spud': 5000,
-  'Fry Cook': 10000,
-  'Hash Brown Hero': 16000,
-  'Potato Mobster': 25000,
-  'Tater Tot Titan': 40000,
-  'Spudlord': 60000,
-  'Mashmaster General': 85000,
-  'Duke of Dauphinoise': 120000,
-  'Fry King': 160000,
-  'Emperor of the Taters': 210000,
-  'Potato Overlord': 270000,
-  'The Ultimate Potato': 350000,
-  'PotatoQueen': 450000, 
-};
+// Array of rank thresholds with rank levels
+const rankThresholds = [
+  { rankLevel: 1, xpThreshold: 0, currentRank: 'Homeless Potato' },
+  { rankLevel: 2, xpThreshold: 1000, currentRank: 'Potato Peeler' },
+  { rankLevel: 3, xpThreshold: 2500, currentRank: 'Mashed Potato' },
+  { rankLevel: 4, xpThreshold: 5000, currentRank: 'Baked Spud' },
+  { rankLevel: 5, xpThreshold: 10000, currentRank: 'Fry Cook' },
+  { rankLevel: 6, xpThreshold: 16000, currentRank: 'Hash Brown Hero' },
+  { rankLevel: 7, xpThreshold: 25000, currentRank: 'Potato Mobster' },
+  { rankLevel: 8, xpThreshold: 40000, currentRank: 'Tater Tot Titan' },
+  { rankLevel: 9, xpThreshold: 60000, currentRank: 'Spudlord' },
+  { rankLevel: 10, xpThreshold: 85000, currentRank: 'Mashmaster General' },
+  { rankLevel: 11, xpThreshold: 120000, currentRank: 'Duke of Dauphinoise' },
+  { rankLevel: 12, xpThreshold: 160000, currentRank: 'Fry King' },
+  { rankLevel: 13, xpThreshold: 210000, currentRank: 'Emperor of the Taters' },
+  { rankLevel: 14, xpThreshold: 270000, currentRank: 'Potato Overlord' },
+  { rankLevel: 15, xpThreshold: 350000, currentRank: 'The Ultimate Potato' },
+  { rankLevel: 16, xpThreshold: 450000, currentRank: 'Potato Queen' },
+];
 
 const getRankForXp = (xp) => {
-  let currentRank = 'Homeless Potato';  
-  let nextRank = null;  
-  let nextRankThreshold = null;  
-  let currentRankThreshold = 0;  
+  let currentRankInfo = rankThresholds[0]; // Default to the first rank
+  let nextRankInfo = null;
 
-  const ranks = Object.keys(xpThresholds);  
-
-  for (let i = 0; i < ranks.length; i++) {
-    const rank = ranks[i];
-    const threshold = xpThresholds[rank];
-
-    if (xp >= threshold) {
-      currentRank = rank;
-      currentRankThreshold = threshold;  
+  for (let i = 0; i < rankThresholds.length; i++) {
+    if (xp >= rankThresholds[i].xpThreshold) {
+      currentRankInfo = rankThresholds[i];
     } else {
-      nextRank = rank;
-      nextRankThreshold = threshold;  
-      break;  
+      nextRankInfo = rankThresholds[i];
+      break;
     }
   }
 
-  if (!nextRank) {
-    nextRank = 'Max Rank Achieved';  
-    nextRankThreshold = currentRankThreshold;  
+  // If nextRankInfo is null, the user has achieved the highest rank
+  if (!nextRankInfo) {
+    nextRankInfo = {
+      rankLevel: currentRankInfo.rankLevel + 1,
+      xpThreshold: Infinity,
+      currentRank: 'Max Rank Achieved',
+    };
   }
 
-  const xpForNextLevel = nextRankThreshold - xp;  
+  const xpForNextLevel = nextRankInfo.xpThreshold - xp;
 
   return {
-    currentRank,
-    nextRank,
+    currentRank: currentRankInfo.currentRank,
+    nextRank: nextRankInfo.currentRank,
     currentXp: xp,
-    nextRankThreshold,
+    nextRankThreshold: nextRankInfo.xpThreshold,
     xpForNextLevel,
-    currentRankThreshold,
+    currentRankThreshold: currentRankInfo.xpThreshold,
+    rankLevel: currentRankInfo.rankLevel,
   };
 };
 
-module.exports = { getRankForXp, xpThresholds };
+module.exports = { getRankForXp, rankThresholds };

@@ -37,11 +37,12 @@ exports.buyWeapon = async (req, res) => {
         name: weapon.name,
         quantity: 1,
         price: weapon.price,
-        attributes: { accuracy: weapon.accuracy },
-        image: weapon.image,
+        image: weapon.image, // Assign image at the top level
+        attributes: {
+          accuracy: Number(weapon.accuracy),
+        },
       });
     }
-
     await user.save();
 
     res.status(200).json({

@@ -36,7 +36,7 @@ app.use('/api/theft', theftRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/weapons', weaponRoutes);
 app.use('/api/inventory', inventoryRoutes);
-app.use('/api/assassinate', assassinationRoutes);
+app.use('/api/assassination', assassinationRoutes);
 app.use('/api/spin', gamblingRoutes);
 app.use('/api/players', playerRoutes);
 
