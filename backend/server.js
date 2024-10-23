@@ -5,10 +5,8 @@ const dotenv = require('dotenv');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
 
-// Load environment variables
 dotenv.config();
 
-// Import routes
 const userRoutes = require('./routes/userRoutes');
 const carRoutes = require('./routes/carRoutes');
 const carRacesRoutes = require('./routes/carRacesRoutes');
