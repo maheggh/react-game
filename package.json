@@ -2,6 +2,8 @@
   "name": "fullstack-project",
   "version": "1.0.0",
   "scripts": {
+    "start": "npm run build && npm --prefix backend run start",
+    "build": "npm --prefix frontend run build",
     "backend": "npm --prefix backend run dev",
     "frontend": "npm --prefix frontend run dev",
     "dev": "concurrently \"npm run backend\" \"npm run frontend\""
@@ -19,5 +21,8 @@
     "bcryptjs": "^2.4.3",
     "express-jwt": "^8.4.1",
     "jwt-decode": "^4.0.0"
+  },
+  "engines": {
+    "node": "16.x"
   }
 }
