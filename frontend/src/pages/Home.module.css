@@ -1,0 +1,23 @@
+/* frontend/src/styles/Home.module.css */
+
+.textCenter {
+  text-align: center;
+}
+
+.potatoQueenImage {
+  /* Ensures images don't exceed their container and maintain aspect ratio */
+  max-width: 100%;
+  height: auto;
+}
+
+.gameDescriptionContainer {
+  /* Tailwind handles the grid, but additional styles can be added if necessary */
+  /* Example: */
+  /* background-color: #f2f2f2; */ /* Already using bg-white in Tailwind */
+}
+
+.gameText {
+  font-size: 1.125rem; /* Equivalent to text-lg in Tailwind */
+  color: #4a5568; /* Equivalent to text-gray-600 in Tailwind */
+  line-height: 1.75rem; /* Equivalent to line-height: 1.6 */
+}
