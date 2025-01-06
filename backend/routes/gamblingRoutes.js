@@ -3,7 +3,6 @@ const router = express.Router();
 const gamblingController = require('../controllers/gamblingController');
 const authMiddleware = require('../middleware/authMiddleware');
 
-// Route to handle spinning the wheel
 router.post('/', authMiddleware, gamblingController.spinWheel);
 
 module.exports = router;
