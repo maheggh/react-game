@@ -1,50 +1,38 @@
 // context/AuthContext.jsx
 
 import React, { createContext, useState, useEffect } from 'react';
-import jwt_decode from 'jwt-decode';
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  // Authentication and user state
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
 
-  // User data
+  // Optional states for user attributes. You can also just keep them inside `user`.
   const [xp, setXp] = useState(0);
   const [rank, setRank] = useState('Homeless Potato');
   const [money, setMoney] = useState(0);
-  const [kills, setKills] = useState(0); // Added kills state
+  const [kills, setKills] = useState(0);
   const [isAlive, setIsAlive] = useState(true);
 
-  // Theft-related state
   const [stolenItems, setStolenItems] = useState([]);
   const [inJail, setInJail] = useState(false);
   const [jailTime, setJailTime] = useState(0);
 
-  // Loading state
   const [loading, setLoading] = useState(true);
 
-  // Function to fetch user data from the backend
+  // Fetches user profile from /api/users/profile using credentials: 'include' (cookie-based)
   const fetchUserData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('No token found in localStorage');
-        setIsLoggedIn(false);
-        return;
-      }
-
       const response = await fetch('/api/users/profile', {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        method: 'GET',
+        credentials: 'include', // important for sending the cookie
       });
 
-      if (response.status === 403) {
-        console.error('Token verification failed');
-        logout(); // Invalidate session
+      if (!response.ok) {
+        // If 401, 403, or any error
+        console.error('Failed to fetch user profile:', response.status);
+        logout();
         return;
       }
 
@@ -54,89 +42,89 @@ export const AuthProvider = ({ children }) => {
         setXp(data.userData.xp || 0);
         setRank(data.userData.rank || 'Homeless Potato');
         setMoney(data.userData.money || 0);
-        setKills(data.userData.kills || 0); // Set kills from userData
+        setKills(data.userData.kills || 0);
         setIsAlive(data.userData.isAlive !== undefined ? data.userData.isAlive : true);
         setStolenItems(data.userData.stolenItems || []);
         setInJail(data.userData.inJail || false);
 
-        // Calculate remaining jail time if applicable
+        // If your server returns jailTimeEnd, you can calculate the countdown:
         if (data.userData.jailTimeEnd) {
           const currentTime = Date.now();
           const jailTimeRemaining = Math.ceil((new Date(data.userData.jailTimeEnd).getTime() - currentTime) / 1000);
-          if (new Date(data.userData.jailTimeEnd).getTime() > currentTime) {
+          if (jailTimeRemaining > 0) {
             setJailTime(jailTimeRemaining);
           } else {
-            // Jail time has expired
             setInJail(false);
             setJailTime(0);
           }
         }
+        setIsLoggedIn(true);
       } else {
-        console.error('Failed to fetch user data:', data.message);
-        logout(); // Invalidate session
+        console.error('User profile not fetched:', data.message);
+        logout();
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
-      logout(); // Invalidate session
+      logout();
     } finally {
       setLoading(false);
     }
   };
 
-  // Check authentication status on component mount
+  // On mount, try to fetch user profile to see if cookie is valid
   useEffect(() => {
-    const initializeAuth = () => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          const decoded = jwt_decode(token);
-          const currentTime = Date.now() / 1000; // Convert to seconds
-
-          if (decoded.exp < currentTime) {
-            console.error('Token expired');
-            logout();
-          } else {
-            setIsLoggedIn(true);
-            setUser(decoded);
-            fetchUserData(); // Fetch additional user data
-          }
-        } catch (error) {
-          console.error('Invalid token:', error);
-          logout();
-        }
-      } else {
-        setLoading(false);
-      }
+    const initializeAuth = async () => {
+      setLoading(true);
+      await fetchUserData();
+      setLoading(false);
     };
-
     initializeAuth();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty dependency array ensures this runs once on mount
+  }, []);
 
-  // Handle login and fetching user data
-  const login = async (token) => {
+  // "login" calls your /api/users/login endpoint with credentials: 'include'
+  // If successful, we do fetchUserData again to confirm we have a valid session
+  const login = async (username, password) => {
     try {
-      localStorage.setItem('token', token);
-      const decoded = jwt_decode(token);
-      setIsLoggedIn(true);
-      setUser(decoded); // Ensure this includes the user's _id
-      await fetchUserData(); // Fetch complete user data after login
+      const response = await fetch('/api/users/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // sends/receives cookies
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // The server has now set an HTTP-only cookie
+        // We'll fetch the user profile to update local state
+        await fetchUserData();
+        return true;
+      } else {
+        console.error('Login failed:', data.message);
+        return false;
+      }
     } catch (error) {
-      console.error('Error during login:', error);
-      logout();
+      console.error('Login error:', error);
+      return false;
     }
   };
 
-  // Handle logout and reset state
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('password'); // Clear password on logout
+  // "logout" calls /api/users/logout, which clears the cookie server-side
+  const logout = async () => {
+    try {
+      await fetch('/api/users/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+
     setIsLoggedIn(false);
     setUser(null);
     setXp(0);
     setRank('Homeless Potato');
     setMoney(0);
-    setKills(0); // Reset kills
+    setKills(0);
     setIsAlive(true);
     setStolenItems([]);
     setInJail(false);
@@ -144,26 +132,18 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   };
 
-  // Handle updating user data and refreshing the user state
-  const updateUserData = async (updatedData) => {
-    if (!user || !user.userId) {
-      console.error('Cannot update user data: User is not logged in or missing _id');
-      return;
-    }
-
+  // Optionally update user data (cars, xp, money, etc.) then re-fetch
+  const updateUserData = async (updates) => {
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch('/api/users/update', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(updatedData),
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(updates),
       });
 
       if (response.ok) {
-        await fetchUserData(); // Refresh the user data after updating
+        await fetchUserData();
       } else {
         const data = await response.json();
         console.error('Failed to update user data:', data.message);
@@ -181,13 +161,13 @@ export const AuthProvider = ({ children }) => {
         xp,
         rank,
         money,
-        kills, // Provide kills in context
+        kills,
         isAlive,
-        setIsAlive, // Included to allow components to modify 'isAlive'
         stolenItems,
-        setStolenItems,
         inJail,
         jailTime,
+        setIsAlive,
+        setStolenItems,
         setInJail,
         setJailTime,
         login,

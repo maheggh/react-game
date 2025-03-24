@@ -3,20 +3,18 @@
 const jwt = require('jsonwebtoken');
 
 module.exports = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  const token = authHeader && authHeader.split(' ')[1];
-
+  // Read the cookie named "token"
+  const token = req.cookies.token;
   if (!token) {
-    console.error('Authorization token missing');
-    return res.status(403).json({ message: 'Authorization token missing' });
+    console.error('No token provided in cookie');
+    return res.status(401).json({ message: 'No token provided' });
   }
-
   try {
     const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
-    req.user = decoded; // Contains userId
+    req.user = decoded; // e.g. { userId: '...' }
     next();
   } catch (error) {
     console.error('Token verification failed:', error.message);
-    res.status(403).json({ message: 'Token verification failed' });
+    return res.status(403).json({ message: 'Invalid or expired token' });
   }
 };

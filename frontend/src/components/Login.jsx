@@ -1,41 +1,45 @@
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { FaUser, FaLock, FaSignInAlt, FaExclamationCircle, FaCheckCircle } from 'react-icons/fa'; // Importing icons from react-icons
+import {
+  FaUser,
+  FaLock,
+  FaSignInAlt,
+  FaExclamationCircle,
+  FaCheckCircle
+} from 'react-icons/fa';
 
 const Login = () => {
+  // Access the 'login' method from your AuthContext
   const { login } = useContext(AuthContext);
+
+  // Component states
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Validate and call the 'login' from context
   const handleLogin = async () => {
-    setIsLoading(true); // Set loading state to true during login attempt
+    if (!username || !password) {
+      setMessage({ type: 'error', text: 'Username and password are required.' });
+      return;
+    }
+
+    setIsLoading(true);
+    setMessage(null);
+
     try {
-      const response = await fetch('/api/users/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }), 
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setMessage({ type: 'error', text: `Error: ${data.message}` });
-        setIsLoading(false);
-        return;
-      }
-
-      if (data.token) {
-        login(data.token); 
+      // AuthContext's "login" should handle the fetch with credentials: 'include'
+      const success = await login(username, password);
+      if (success) {
         setMessage({ type: 'success', text: 'Login successful!' });
       } else {
         setMessage({ type: 'error', text: 'Invalid credentials' });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'Error during login' });
+      setMessage({ type: 'error', text: 'An error occurred during login.' });
     } finally {
-      setIsLoading(false); // Reset loading state after the login attempt
+      setIsLoading(false);
     }
   };
 
@@ -47,7 +51,7 @@ const Login = () => {
         <h2 className="text-2xl font-bold text-gray-800">Login</h2>
       </div>
 
-      {/* Username Input */}
+      {/* Username Field */}
       <div className="mb-4">
         <label htmlFor="username" className="block text-gray-700 font-semibold mb-2">
           Username:
@@ -57,15 +61,16 @@ const Login = () => {
           <input
             type="text"
             id="username"
+            className="w-full bg-gray-100 outline-none text-gray-700"
+            placeholder="Enter your username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder="Enter your username"
-            className="w-full bg-gray-100 outline-none text-gray-700"
+            disabled={isLoading}
           />
         </div>
       </div>
 
-      {/* Password Input */}
+      {/* Password Field */}
       <div className="mb-4">
         <label htmlFor="password" className="block text-gray-700 font-semibold mb-2">
           Password:
@@ -75,10 +80,11 @@ const Login = () => {
           <input
             type="password"
             id="password"
+            className="w-full bg-gray-100 outline-none text-gray-700"
+            placeholder="Enter your password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter your password"
-            className="w-full bg-gray-100 outline-none text-gray-700"
+            disabled={isLoading}
           />
         </div>
       </div>
@@ -99,12 +105,13 @@ const Login = () => {
         )}
       </button>
 
-      {/* Display Message (Success or Error) */}
+      {/* Status Message */}
       {message && (
         <div
           className={`mt-4 p-4 rounded-md flex items-center ${
-            message.type === 'success' ? 'bg-green-100 border border-green-400 text-green-700' :
-            'bg-red-100 border border-red-400 text-red-700'
+            message.type === 'success'
+              ? 'bg-green-100 border border-green-400 text-green-700'
+              : 'bg-red-100 border border-red-400 text-red-700'
           }`}
           role="alert"
         >
