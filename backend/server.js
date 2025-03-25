@@ -24,6 +24,7 @@ const inventoryRoutes = require('./routes/inventoryRoutes');
 const assassinationRoutes = require('./routes/assassinationRoutes');
 const gamblingRoutes = require('./routes/gamblingRoutes');
 const playerRoutes = require('./routes/playerRoutes');
+const jailRoutes = require('./routes/jailRoutes');
 
 // Initialize app
 const app = express();
@@ -58,6 +59,7 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/assassination', assassinationRoutes);
 app.use('/api/spin', gamblingRoutes);
 app.use('/api/players', playerRoutes);
+app.use('/api/jail', jailRoutes);
 
 // Connect to MongoDB
 mongoose

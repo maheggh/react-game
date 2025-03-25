@@ -105,7 +105,7 @@ const WeaponStore = () => {
   };
 
   return (
-    <div className="container mx-auto p-6 min-h-screen bg-gray-900 text-white pb-40 pt-20">
+    <div className="container mx-auto p-6 min-w-full min-h-screen bg-gray-900 text-white pb-40 pt-20">
       <h1 className="text-4xl font-bold mb-6 text-center text-yellow-400">Potato Weapon Store</h1>
 
       {/* Display Error Message if Any */}

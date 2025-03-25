@@ -218,7 +218,7 @@ const BossesPage = () => {
   };
 
   return (
-    <div className="container mx-auto p-4 min-h-screen bg-gray-900 text-white pb-40">
+    <div className="container min-w-full mx-auto p-4 min-h-screen bg-gray-900 text-white pb-40">
       <h1 className="text-4xl font-bold mb-6 text-center text-yellow-400">Boss Fights</h1>
       <h1 className="text-left p-4 text-lg">
         Ah, so you think you're ready to take on the bosses, huh? How adorable. A little couch potato like you, stepping up to face legends like the Potato Don and the Spud Spy. Don't get too excited—these aren't your average garden-variety tubers. But sure, give it a shot. Maybe, just maybe, you'll survive long enough to earn a shiny trinket... or end up mashed like the rest of them.

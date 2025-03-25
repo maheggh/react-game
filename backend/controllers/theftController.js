@@ -1,114 +1,140 @@
 const User = require('../models/User');
 const { getRankForXp } = require('../utils/rankCalculator');
+const { startJailTime, checkAndReleaseUser } = require('./jailController');
 
-// Steal an item
+const THEFT_ITEMS = {
+  Purse: [
+    { name: 'Slim Purse', price: 50, baseChance: 40 },
+    { name: 'Fat Purse', price: 200, baseChance: 25 }
+  ],
+  Jewelry: [
+    { name: 'Diamond', price: 5000, baseChance: 10 },
+    { name: 'Ruby', price: 3000, baseChance: 15 }
+  ],
+  ATM: [
+    { name: 'ATM Money', price: 1000, baseChance: 30 }
+  ],
+  Bank: [
+    { name: 'Bank Money', price: 50000, baseChance: 5 }
+  ]
+};
+
+exports.getStolenItems = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    await checkAndReleaseUser(user);
+    const jailTimeLeft = user.inJail ? Math.max(0, user.jailTimeEnd - Date.now()) : 0;
+    return res.json({
+      stolenItems: user.stolenItems || [],
+      inJail: user.inJail,
+      jailTime: Math.ceil(jailTimeLeft / 1000)
+    });
+  } catch (error) {
+    console.error('Error fetching stolen items:', error.message);
+    return res.status(500).json({ message: 'Server error fetching stolen items' });
+  }
+};
+
 exports.stealItem = async (req, res) => {
   try {
-    const { userId } = req.user;
-    const { itemType } = req.body;
-
+    const userId = req.user.userId;
+    const { category } = req.body;
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
-    if (user.inJail) {
-      return res.status(403).json({ message: 'You cannot steal while in jail!' });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
-
-    const items = {
-      'Purse': [
-        { name: 'Slim Purse', price: 50, baseChance: 40 },
-        { name: 'Fat Purse', price: 200, baseChance: 25 }
-      ],
-      'Jewelry': [
-        { name: 'Diamond', price: 5000, baseChance: 10 },
-        { name: 'Ruby', price: 3000, baseChance: 15 }
-      ],
-      'ATM': [
-        { name: 'ATM Money', price: 1000, baseChance: 30 }
-      ],
-      'Bank': [
-        { name: 'Bank Money', price: 50000, baseChance: 5 }
-      ]
-    };
-
-    const availableItems = items[itemType];
-    if (!availableItems) return res.status(400).json({ message: 'Invalid item type' });
-
-    const selectedItem = getRandomItem(availableItems);
-    const stealChance = Math.min(selectedItem.baseChance + user.level * 5, 90);
-    const roll = Math.floor(Math.random() * 100) + 1;
-
-    if (roll <= stealChance) {
-      // Successful theft
-      user.stolenItems.push(selectedItem);
-      const xpGained = 100;
-      user.xp += xpGained;
-      user.rank = getRankForXp(user.xp).currentRank;
-
-      await user.save();
-
+    await checkAndReleaseUser(user);
+    if (user.inJail) {
+      return res.status(403).json({
+        message: 'You cannot steal while in jail!',
+        inJail: true,
+        jailTime: Math.ceil((user.jailTimeEnd - Date.now()) / 1000)
+      });
+    }
+    const items = THEFT_ITEMS[category];
+    if (!items) {
+      return res.status(400).json({ message: 'Invalid theft category' });
+    }
+    const selectedItem = pickRandomItem(items);
+    const success = attemptTheft(selectedItem, user);
+    if (success) {
       return res.status(200).json({
         message: `You successfully stole a ${selectedItem.name}!`,
         stolenItem: selectedItem,
         xp: user.xp,
-        rank: user.rank,
+        rank: user.rank
       });
     } else {
-      // Failed theft - Send to jail
-      user.inJail = true;
-      const jailTime = 30 * 1000; // 30 seconds in milliseconds
-      user.jailTimeEnd = Date.now() + jailTime; // Set jail time end based on current timestamp
-      await user.save();
-
       return res.status(403).json({
         message: 'You got caught and sent to jail!',
         inJail: true,
-        jailTime: Math.ceil(jailTime / 1000), // Send jail time in seconds
+        jailTime: Math.ceil((user.jailTimeEnd - Date.now()) / 1000)
       });
     }
   } catch (error) {
     console.error('Error during theft:', error.message);
-    return res.status(500).json({ message: 'Server error during theft', error: error.message });
+    return res.status(500).json({ message: 'Server error during theft' });
   }
 };
 
-
-// Sell stolen item
 exports.sellItem = async (req, res) => {
   try {
-    const { userId } = req.user;
+    const userId = req.user.userId;
     const { itemName } = req.body;
-
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
-    const itemIndex = user.stolenItems.findIndex((item) => item.name === itemName);
-    if (itemIndex === -1) return res.status(400).json({ message: 'Item not found in pocket' });
-
-    const stolenItem = user.stolenItems[itemIndex];
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    const index = user.stolenItems.findIndex(i => i.name === itemName);
+    if (index === -1) {
+      return res.status(400).json({ message: 'Item not found in your pocket' });
+    }
+    const stolenItem = user.stolenItems[index];
     user.money += stolenItem.price;
-    user.stolenItems.splice(itemIndex, 1);
-
+    user.stolenItems.splice(index, 1);
     await user.save();
     return res.status(200).json({
       message: `You sold ${stolenItem.name} for $${stolenItem.price}`,
-      money: user.money,
+      money: user.money
     });
   } catch (error) {
     console.error('Error selling item:', error.message);
-    return res.status(500).json({ message: 'Server error during sale', error: error.message });
+    return res.status(500).json({ message: 'Server error during sale' });
   }
 };
 
-// Helper function to get random item based on chance
-const getRandomItem = (items) => {
-  let totalChance = items.reduce((sum, item) => sum + item.baseChance, 0); // Use baseChance here
+function attemptTheft(item, user) {
+  const level = user.level || 1;
+  const chance = Math.min(item.baseChance + level * 5, 90);
+  const roll = Math.floor(Math.random() * 100) + 1;
+  if (roll <= chance) {
+    user.stolenItems.push(item);
+    user.xp += 100;
+    user.rank = getRankForXp(user.xp).currentRank;
+    user.save();
+    return true;
+  } else {
+    const jailDuration = 30;
+    require('./jailController').startJailTime(user, jailDuration);
+    return false;
+  }
+}
+
+function pickRandomItem(items) {
+  let totalChance = 0;
+  for (const i of items) {
+    totalChance += i.baseChance;
+  }
   let randomNum = Math.random() * totalChance;
-  for (let item of items) {
-    if (randomNum < item.baseChance) {
-      return item;
+  for (const i of items) {
+    if (randomNum < i.baseChance) {
+      return i;
     }
-    randomNum -= item.baseChance;
+    randomNum -= i.baseChance;
   }
   return items[items.length - 1];
-};
+}
