@@ -44,7 +44,7 @@ const ScorePage = () => {
   });
 
   return (
-    <div className="container mx-auto p-6 text-white min-h-screen mb-40">
+    <div className="container mx-auto p-6 text-white min-h-screen mb-40 min-w-full bg-gray-900">
       <h1 className="text-4xl font-bold mb-8 text-center text-green-500">Leaderboard</h1>
 
       {errorMessage && <p className="text-red-500 text-center mb-4">{errorMessage}</p>}

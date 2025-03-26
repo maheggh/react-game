@@ -362,7 +362,7 @@ const Theft = () => {
             </p>
           </div>
           <img
-            src="/assets/jailpic.jpg"
+            src="/assets/jailpic.JPG"
             alt="Jail"
             className="w-40 h-40 object-cover ml-auto rounded-full border-2 border-red-500"
             onError={(e) => {

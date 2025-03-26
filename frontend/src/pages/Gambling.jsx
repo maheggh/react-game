@@ -1,66 +1,64 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
-import { AuthContext } from '../context/AuthContext'; // Import AuthContext
-import styles from './Gambling.module.css'; // Import the CSS module
+import { AuthContext } from '../context/AuthContext';
+import styles from './Gambling.module.css';
+
+const sectors = [
+  { color: '#C71585', label: '300' },
+  { color: '#FFB6C1', label: '50' },
+  { color: '#FF69B4', label: '100' },
+  { color: '#8B008B', label: '400' },
+  { color: '#FF1493', label: '200' },
+  { color: '#4B0082', label: '500' },
+  { color: '#FFD1DC', label: '10' }
+];
+
+const friction = 0.991;
+const TAU = 2 * Math.PI;
+const arc = TAU / sectors.length;
 
 const GamblingPage = () => {
-  const { money, updateUserData } = useContext(AuthContext); // Access money from AuthContext
-  const canvasRef = useRef(null); // Reference for the wheel canvas
-  const resultTextRef = useRef(null); // Reference for result text
-  const [currentMoney, setCurrentMoney] = useState(money); // Local money state to reflect changes instantly
+  const { money, updateUserData } = useContext(AuthContext);
+  const canvasRef = useRef(null);
+  const resultTextRef = useRef(null);
+  const [currentMoney, setCurrentMoney] = useState(money);
   const [angVel, setAngVel] = useState(0);
-  const [ang, setAng] = useState(0); // Angle in radians
-  const [resultHandled, setResultHandled] = useState(false);
-  const [spinning, setSpinning] = useState(false); // Track spinning status
+  const [ang, setAng] = useState(0);
+  const [resultHandled, setResultHandled] = useState(true);
+  const [spinning, setSpinning] = useState(false);
+  const intervalRef = useRef(null);
 
-  const sectors = [
-    { color: '#C71585', label: '300' },
-    { color: '#FFB6C1', label: '50' },
-    { color: '#FF69B4', label: '100' },
-    { color: '#8B008B', label: '400' },
-    { color: '#FF1493', label: '200' },
-    { color: '#4B0082', label: '500' },
-    { color: '#FFD1DC', label: '10' }
-  ];
-
-  const friction = 0.991; // Reduced friction to make the wheel spin longer
-  const TAU = 2 * Math.PI;
-  const arc = TAU / sectors.length;
-
-  // Function to spin the wheel
   const spinWheel = () => {
-    if (!spinning && angVel === 0) { // Only allow spinning if it's not already spinning
-      if (currentMoney >= 250) {
-        const updatedMoney = currentMoney - 250;
-        setCurrentMoney(updatedMoney); // Update local money state
-        updateUserData({ money: updatedMoney }); // Sync with backend
-
-        setAngVel(Math.random() * 0.3 + 0.3); // Set a random initial angular velocity
-        setResultHandled(false); // Reset result handled
-        setSpinning(true); // Mark that the wheel is spinning
-        resultTextRef.current.textContent = ''; // Clear the result text
-      } else {
-        resultTextRef.current.textContent = 'Not enough money to spin.';
-      }
+    if (spinning || currentMoney < 250) {
+      resultTextRef.current.textContent = currentMoney < 250 ? 'Not enough money to spin.' : '';
+      return;
     }
+
+    const updatedMoney = currentMoney - 250;
+    setCurrentMoney(updatedMoney);
+    updateUserData({ money: updatedMoney });
+
+    setAngVel(Math.random() * 0.3 + 0.3);
+    setResultHandled(false);
+    setSpinning(true);
+    resultTextRef.current.textContent = '';
   };
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    const dia = ctx.canvas.width;
-    const rad = dia / 2;
+    const rad = canvas.width / 2;
 
     const drawSector = (sector, i) => {
-      const ang = arc * i;
+      const angle = arc * i;
       ctx.save();
       ctx.beginPath();
       ctx.fillStyle = sector.color;
       ctx.moveTo(rad, rad);
-      ctx.arc(rad, rad, rad, ang, ang + arc);
+      ctx.arc(rad, rad, rad, angle, angle + arc);
       ctx.lineTo(rad, rad);
       ctx.fill();
       ctx.translate(rad, rad);
-      ctx.rotate(ang + arc / 2);
+      ctx.rotate(angle + arc / 2);
       ctx.textAlign = 'right';
       ctx.fillStyle = '#fff';
       ctx.font = 'bold 30px sans-serif';
@@ -68,15 +66,10 @@ const GamblingPage = () => {
       ctx.restore();
     };
 
+    sectors.forEach(drawSector);
+
     const rotateWheel = () => {
-      const sector = sectors[getIndex()];
       canvas.style.transform = `rotate(${ang - Math.PI / 2}rad)`;
-      if (angVel < 0.002 && !resultHandled) {
-        handleResult(sector); // Handle the result
-        setResultHandled(true);
-        setSpinning(false);
-        setAngVel(0); // Stop the wheel
-      }
     };
 
     const getIndex = () => {
@@ -84,31 +77,34 @@ const GamblingPage = () => {
     };
 
     const updateWheel = () => {
-      if (angVel) {
-        setAngVel(prev => prev * friction); // Reduce angular velocity
-        setAng(prev => (prev + angVel) % TAU); // Update the angle
-      }
+      setAngVel(prev => {
+        const newAngVel = prev * friction;
+        if (newAngVel < 0.002 && !resultHandled && spinning) {
+          const sector = sectors[getIndex()];
+          handleResult(sector);
+          setResultHandled(true);
+          setSpinning(false);
+          return 0;
+        }
+        return newAngVel;
+      });
+      setAng(prev => (prev + angVel) % TAU);
       rotateWheel();
     };
 
-    sectors.forEach(drawSector);
-    rotateWheel(); 
+    intervalRef.current = setInterval(updateWheel, 1000 / 60);
 
-    const interval = setInterval(updateWheel, 1000 / 60); 
-    return () => clearInterval(interval); 
-  }, [angVel, ang, resultHandled]);
+    return () => {
+      clearInterval(intervalRef.current);
+    };
+  }, [ang, angVel, spinning, resultHandled]);
 
   const handleResult = (sector) => {
-    let winningAmount = parseInt(sector.label);
-    if (!isNaN(winningAmount)) {
-      const updatedMoney = currentMoney + winningAmount;
-      setCurrentMoney(updatedMoney); 
-      updateUserData({ money: updatedMoney }); 
-
-      resultTextRef.current.textContent = `🎉 Congratulations! You won $${winningAmount} you degenerate gambler!`;
-    } else {
-      resultTextRef.current.textContent = 'Spin to win!';
-    }
+    const winningAmount = parseInt(sector.label);
+    const updatedMoney = currentMoney + winningAmount;
+    setCurrentMoney(updatedMoney);
+    updateUserData({ money: updatedMoney });
+    resultTextRef.current.textContent = `🎉 Congratulations! You won $${winningAmount}!`;
   };
 
   return (
@@ -121,8 +117,8 @@ const GamblingPage = () => {
         <canvas ref={canvasRef} width="400" height="400"></canvas>
       </div>
       <button className={styles.spinButton} onClick={spinWheel} disabled={spinning}>
-          Spin the Wheel! yolo
-        </button>
+        Spin the Wheel! yolo
+      </button>
       <p className={styles.resultText} ref={resultTextRef}></p>
     </div>
   );

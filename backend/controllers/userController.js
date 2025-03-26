@@ -10,7 +10,6 @@ exports.registerUser = async (req, res) => {
   try {
     let { username, password } = req.body;
 
-    // If username or password is missing, generate random ones
     if (!username) {
       username = generateRandomGangsterName();
     }
@@ -22,10 +21,10 @@ exports.registerUser = async (req, res) => {
     const newUser = new User({
       username,
       password: hashedPassword,
-      isAlive: true, // Ensure the user starts alive
+      isAlive: true,
       xp: 0,
       rank: 'Homeless Potato',
-      money: 0,
+      money: 0, 
       cars: [],
       stolenItems: [],
       inventory: [],
@@ -35,7 +34,6 @@ exports.registerUser = async (req, res) => {
 
     await newUser.save();
 
-    // Convert ObjectId to string when generating token
     const token = jwt.sign({ userId: newUser._id.toString() }, process.env.TOKEN_SECRET, { expiresIn: '24h' });
 
     res.status(201).json({
@@ -44,7 +42,11 @@ exports.registerUser = async (req, res) => {
       userData: {
         userId: newUser._id.toString(),
         username: newUser.username,
-        // Consider not sending the password back to the client
+        money: newUser.money,       // <-- Important: Include money here
+        isAlive: newUser.isAlive,   // also recommended
+        xp: newUser.xp,             // recommended
+        rank: newUser.rank,         // recommended
+        kills: newUser.kills,       // recommended
         message: 'User registered successfully',
       },
     });
@@ -53,6 +55,7 @@ exports.registerUser = async (req, res) => {
     res.status(500).json({ message: 'Failed to register user' });
   }
 };
+
 
 exports.loginUser = async (req, res) => {
   try {
@@ -262,12 +265,17 @@ exports.getTargets = async (req, res) => {
     const userId = req.user.userId;
     const users = await User.find({ _id: { $ne: userId }, isAlive: true }).select('username level xp _id');
 
+    if (!users || users.length === 0) {
+      return res.status(200).json({ success: true, targets: [], message: 'No valid targets available.' });
+    }
+
     res.status(200).json({ success: true, targets: users });
   } catch (error) {
     console.error('Error fetching targets:', error);
     res.status(500).json({ success: false, message: 'Error fetching targets' });
   }
 };
+
 
 exports.updateBossItems = async (req, res) => {
   const { bossItems } = req.body;

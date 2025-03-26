@@ -46,8 +46,6 @@ const Home = () => {
         <div className="col-span-2">
           {!isLoggedIn ? (
             <div className="flex flex-col space-y-6">
-              <Register />
-              <Login />
             </div>
           ) : (
             <UserStatus />
